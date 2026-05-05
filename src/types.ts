@@ -1,5 +1,5 @@
-export type ActivityType = 'running' | 'cycling' | 'both'
-export type TargetType = 'kom' | 'gender' | 'age_group' | 'personal_best'
+export type ActivityType = 'running' | 'cycling'
+export type TargetType = 'kom' | 'personal_best'
 
 export interface Settings {
   radiusKm: number
@@ -19,6 +19,8 @@ export interface ScoredSegment {
   targetLabel: string
   city: string | null
   state: string | null
+  midpointLat: number
+  midpointLng: number
 }
 
 export interface StravaStatus {

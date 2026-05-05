@@ -25,6 +25,9 @@ export async function getToken(userId) {
       refreshToken: entity.refreshToken,
       expiresAt: Number(entity.expiresAt),
       athleteId: entity.athleteId,
+      athleteName: entity.athleteName ?? null,
+      athleteSex: entity.athleteSex ?? null,
+      athleteType: entity.athleteType != null ? Number(entity.athleteType) : null,
     }
   } catch (err) {
     if (err.statusCode === 404) return null
@@ -32,7 +35,7 @@ export async function getToken(userId) {
   }
 }
 
-export async function saveToken(userId, { accessToken, refreshToken, expiresAt, athleteId, athleteName }) {
+export async function saveToken(userId, { accessToken, refreshToken, expiresAt, athleteId, athleteName, athleteSex, athleteType }) {
   const client = await getClientReady()
   await client.upsertEntity(
     {
@@ -43,6 +46,8 @@ export async function saveToken(userId, { accessToken, refreshToken, expiresAt, 
       expiresAt: String(expiresAt),
       athleteId: String(athleteId),
       athleteName: athleteName ?? '',
+      athleteSex: athleteSex ?? '',
+      athleteType: athleteType != null ? String(athleteType) : '',
     },
     'Replace',
   )
@@ -53,7 +58,7 @@ export async function getValidToken(userId) {
   if (!token) return null
 
   if (Date.now() / 1000 < token.expiresAt - 300) {
-    return token.accessToken
+    return { accessToken: token.accessToken, athleteSex: token.athleteSex, athleteType: token.athleteType }
   }
 
   const res = await fetch('https://www.strava.com/oauth/token', {
@@ -77,5 +82,5 @@ export async function getValidToken(userId) {
     athleteId: token.athleteId,
   })
 
-  return data.access_token
+  return { accessToken: data.access_token, athleteSex: token.athleteSex, athleteType: token.athleteType }
 }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:strava.github.io)",
+      "WebFetch(domain:developers.strava.com)",
+      "WebFetch(domain:stravalib.readthedocs.io)"
+    ]
+  }
+}

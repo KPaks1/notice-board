@@ -21,13 +21,20 @@ async function stravaGet(path, accessToken) {
   return res.json()
 }
 
-function targetLabel(targetType) {
-  switch (targetType) {
-    case 'gender': return 'Gender CR'
-    case 'age_group': return 'Age CR'
-    case 'personal_best': return 'Your Best'
-    default: return 'KOM/QOM'
-  }
+// xoms times can be formatted strings ("1:02") or integers (seconds)
+function parseXomTime(xom) {
+  if (!xom || xom === 'Not Specified') return null
+  if (typeof xom === 'number') return xom
+  const parts = String(xom).split(':').map(Number)
+  if (parts.some(isNaN) || parts.length < 2 || parts.length > 3) return null
+  return parts.length === 3
+    ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+    : parts[0] * 60 + parts[1]
+}
+
+function targetLabel(targetType, athleteSex) {
+  if (targetType === 'personal_best') return 'Your Best'
+  return athleteSex === 'F' ? 'QOM' : 'KOM'
 }
 
 app.http('segments', {
@@ -40,14 +47,14 @@ app.http('segments', {
       return { status: 401, jsonBody: { error: 'Not authenticated' } }
     }
 
-    const accessToken = await getValidToken(athleteId)
-    if (!accessToken) {
+    const tokenData = await getValidToken(athleteId)
+    if (!tokenData) {
       return { status: 403, jsonBody: { error: 'Strava not connected' } }
     }
+    const { accessToken, athleteSex } = tokenData
 
     const lat = parseFloat(request.query.get('lat') ?? '')
     const lng = parseFloat(request.query.get('lng') ?? '')
-    const radiusKm = parseFloat(request.query.get('radius') ?? '5')
     const activityType = request.query.get('activityType') ?? 'running'
     const targetType = request.query.get('targetType') ?? 'kom'
 
@@ -55,26 +62,19 @@ app.http('segments', {
       return { status: 400, jsonBody: { error: 'lat and lng are required' } }
     }
 
-    const bbox = boundingBox(lat, lng, radiusKm)
+    // Always fetch at max radius — client filters by actual radius
+    const bbox = boundingBox(lat, lng, 20)
     const stravaActivityType = activityType === 'cycling' ? 'riding' : 'running'
 
     const exploreKey = `explore:${bbox}:${activityType}`
     let exploreResults = cacheGet(exploreKey)
     if (!exploreResults) {
       try {
-        if (activityType === 'both') {
-          const [run, ride] = await Promise.all([
-            stravaGet(`/segments/explore?bounds=${bbox}&activity_type=running`, accessToken),
-            stravaGet(`/segments/explore?bounds=${bbox}&activity_type=riding`, accessToken),
-          ])
-          exploreResults = [...(run.segments ?? []), ...(ride.segments ?? [])]
-        } else {
-          const data = await stravaGet(
-            `/segments/explore?bounds=${bbox}&activity_type=${stravaActivityType}`,
-            accessToken,
-          )
-          exploreResults = data.segments ?? []
-        }
+        const data = await stravaGet(
+          `/segments/explore?bounds=${bbox}&activity_type=${stravaActivityType}`,
+          accessToken,
+        )
+        exploreResults = data.segments ?? []
         cacheSet(exploreKey, exploreResults, TTL_EXPLORE)
       } catch (err) {
         context.error('Segment explore failed:', err.message)
@@ -108,33 +108,26 @@ app.http('segments', {
     const scored = await Promise.all(
       top10.map(async (seg) => {
         try {
-          const leaderQuery = targetType === 'age_group'
-            ? '?per_page=1&age_group=true'
-            : '?per_page=1'
-          const leaderKey = `leader:${seg.id}:${targetType}`
-          const prKey = `pr:${seg.id}:${athleteId}`
-
-          let board = cacheGet(leaderKey)
-          if (!board) {
-            board = await stravaGet(`/segments/${seg.id}/leaderboard${leaderQuery}`, accessToken)
-            cacheSet(leaderKey, board, TTL_LEADERBOARD)
+          const segKey = `seg:${seg.id}:${athleteId}`
+          let segDetail = cacheGet(segKey)
+          if (!segDetail) {
+            segDetail = await stravaGet(`/segments/${seg.id}`, accessToken)
+            cacheSet(segKey, segDetail, TTL_LEADERBOARD)
           }
 
-          let prBoard = cacheGet(prKey)
-          if (prBoard === null && targetType !== 'personal_best') {
-            prBoard = await stravaGet(`/segments/${seg.id}/leaderboard?per_page=1&athlete_id=${athleteId}`, accessToken).catch(() => null)
-            cacheSet(prKey, prBoard, TTL_LEADERBOARD)
+          const athletePR = segDetail.athlete_segment_stats?.pr_elapsed_time ?? null
+
+          let targetTime, userPR
+          if (targetType === 'personal_best') {
+            if (!athletePR) return null
+            targetTime = athletePR
+            userPR = athletePR
+          } else {
+            const komTime = parseXomTime(athleteSex === 'F' ? segDetail.xoms?.qom : segDetail.xoms?.kom)
+            if (!komTime) return null
+            targetTime = komTime
+            userPR = athletePR
           }
-
-          const topEntry = board.entries?.[0]
-          if (!topEntry) return null
-
-          const targetTime = topEntry.elapsed_time
-          if (!targetTime) return null
-
-          const userPR = targetType === 'personal_best'
-            ? targetTime
-            : prBoard?.entries?.[0]?.elapsed_time ?? null
 
           const segDistance = seg.distance
           const requiredPaceSecsPerMeter = (targetTime - 1) / segDistance
@@ -147,6 +140,9 @@ app.http('segments', {
             score = (requiredPaceSecsPerMeter - userPRPace) / requiredPaceSecsPerMeter
           }
 
+          const midpointLat = ((seg.start_latlng?.[0] ?? lat) + (seg.end_latlng?.[0] ?? lat)) / 2
+          const midpointLng = ((seg.start_latlng?.[1] ?? lng) + (seg.end_latlng?.[1] ?? lng)) / 2
+
           return {
             id: seg.id,
             name: seg.name,
@@ -156,9 +152,11 @@ app.http('segments', {
             score,
             targetTime,
             userPR,
-            targetLabel: targetLabel(targetType),
+            targetLabel: targetLabel(targetType, athleteSex),
             city: seg.city ?? null,
             state: seg.state ?? null,
+            midpointLat,
+            midpointLng,
           }
         } catch (err) {
           context.warn(`Failed to score segment ${seg.id}:`, err.message)

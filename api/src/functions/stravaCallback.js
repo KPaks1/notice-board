@@ -38,6 +38,8 @@ app.http('stravaCallback', {
       expiresAt: tokenData.expires_at,
       athleteId,
       athleteName: `${tokenData.athlete?.firstname ?? ''} ${tokenData.athlete?.lastname ?? ''}`.trim(),
+      athleteSex: tokenData.athlete?.sex ?? null,
+      athleteType: tokenData.athlete?.athlete_type ?? null,
     })
 
     const sessionToken = createToken(athleteId)

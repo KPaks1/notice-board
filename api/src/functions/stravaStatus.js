@@ -17,6 +17,14 @@ app.http('stravaStatus', {
       return { jsonBody: { connected: false } }
     }
 
-    return { jsonBody: { connected: true, athleteId } }
+    return {
+      jsonBody: {
+        connected: true,
+        athleteId,
+        athleteName: token.athleteName ?? null,
+        athleteSex: token.athleteSex ?? null,
+        athleteType: token.athleteType ?? null,
+      },
+    }
   },
 })

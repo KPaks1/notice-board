@@ -7,15 +7,12 @@ interface Props {
 
 const TARGET_OPTIONS: { value: TargetType; label: string }[] = [
   { value: 'kom', label: 'KOM / QOM' },
-  { value: 'gender', label: 'Gender Record' },
-  { value: 'age_group', label: 'Age Group Record' },
   { value: 'personal_best', label: 'Personal Best' },
 ]
 
 const ACTIVITY_OPTIONS: { value: ActivityType; label: string }[] = [
   { value: 'running', label: 'Running' },
   { value: 'cycling', label: 'Cycling' },
-  { value: 'both', label: 'Both' },
 ]
 
 export default function SettingsPanel({ settings, onChange }: Props) {

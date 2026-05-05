@@ -20,14 +20,12 @@ export async function fetchStravaStatus(): Promise<StravaStatus> {
 export async function fetchSegments(
   lat: number,
   lng: number,
-  radiusKm: number,
   activityType: string,
   targetType: string,
 ): Promise<ScoredSegment[]> {
   const params = new URLSearchParams({
     lat: String(lat),
     lng: String(lng),
-    radius: String(radiusKm),
     activityType,
     targetType,
   })
