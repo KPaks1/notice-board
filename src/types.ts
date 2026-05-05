@@ -5,6 +5,8 @@ export interface Settings {
   radiusKm: number
   activityType: ActivityType
   targetType: TargetType
+  minSegmentKm: number
+  maxSegmentKm: number
 }
 
 export interface ScoredSegment {
@@ -21,9 +23,15 @@ export interface ScoredSegment {
   state: string | null
   midpointLat: number
   midpointLng: number
+  polyline: string | null
+  startLatlng: [number, number] | null
+  endLatlng: [number, number] | null
 }
 
 export interface StravaStatus {
   connected: boolean
-  athleteName?: string
+  athleteId?: string
+  athleteName?: string | null
+  athleteSex?: 'M' | 'F' | null
+  athleteType?: 0 | 1 | null
 }

@@ -1,9 +1,13 @@
 import type { ScoredSegment, StravaStatus } from './types'
 
-const TOKEN_KEY = 'en_token'
+export const TOKEN_KEY = 'en_token'
 
 export function storeToken(token: string) {
   sessionStorage.setItem(TOKEN_KEY, token)
+}
+
+export function clearToken() {
+  sessionStorage.removeItem(TOKEN_KEY)
 }
 
 function authHeaders(): Record<string, string> {

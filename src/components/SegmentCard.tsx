@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { ScoredSegment } from '../types'
 
 function formatTime(seconds: number): string {
@@ -29,7 +30,11 @@ export default function SegmentCard({ segment }: Props) {
   const needTime = Math.max(0, segment.targetTime - 1)
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors">
+    <Link
+      to={`/segment/${segment.id}`}
+      state={segment}
+      className="block bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors"
+    >
       <div className="flex items-start justify-between gap-3 mb-2">
         <h3 className="text-white font-medium text-sm leading-snug flex-1">{segment.name}</h3>
         <Badge score={segment.score} />
@@ -59,6 +64,6 @@ export default function SegmentCard({ segment }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }

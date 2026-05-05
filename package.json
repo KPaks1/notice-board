@@ -11,15 +11,20 @@
     "start:dev": "concurrently \"npm run dev\" \"cd api && npm install && func start\""
   },
   "dependencies": {
+    "@mapbox/polyline": "^1.2.1",
     "@tailwindcss/vite": "^4.2.4",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.14.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.15.0"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^2.0.9",
     "@eslint/js": "^10.0.1",
+    "@types/leaflet": "^1.9.21",
+    "@types/mapbox__polyline": "^1.0.5",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

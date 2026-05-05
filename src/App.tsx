@@ -4,6 +4,7 @@ import { fetchStravaStatus, storeToken } from './api'
 import type { StravaStatus } from './types'
 import ConnectStrava from './pages/ConnectStrava'
 import Dashboard from './pages/Dashboard'
+import SegmentDetailPage from './pages/SegmentDetailPage'
 
 function TokenHandler() {
   const navigate = useNavigate()
@@ -20,7 +21,7 @@ function TokenHandler() {
   return null
 }
 
-function StravaGuard({ children }: { children: React.ReactNode }) {
+function StravaGuard({ children }: { children: (status: StravaStatus) => React.ReactNode }) {
   const [status, setStatus] = useState<StravaStatus | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -33,7 +34,7 @@ function StravaGuard({ children }: { children: React.ReactNode }) {
 
   if (loading) return <LoadingScreen />
   if (!status?.connected) return <Navigate to="/connect-strava" replace />
-  return <>{children}</>
+  return <>{children(status!)}</>
 }
 
 function LoadingScreen() {
@@ -50,7 +51,8 @@ export default function App() {
       <TokenHandler />
       <Routes>
         <Route path="/connect-strava" element={<ConnectStrava />} />
-        <Route path="/" element={<StravaGuard><Dashboard /></StravaGuard>} />
+        <Route path="/" element={<StravaGuard>{(status) => <Dashboard stravaStatus={status} />}</StravaGuard>} />
+        <Route path="/segment/:id" element={<StravaGuard>{() => <SegmentDetailPage />}</StravaGuard>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

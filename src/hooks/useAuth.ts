@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { AuthUser } from '../types'
+
+interface AuthUser {
+  userId: string
+  userDetails: string
+  identityProvider: string
+}
 
 const DEV_USER: AuthUser = {
   userId: 'dev-user-local',

@@ -157,6 +157,9 @@ app.http('segments', {
             state: seg.state ?? null,
             midpointLat,
             midpointLng,
+            polyline: segDetail.map?.polyline ?? null,
+            startLatlng: segDetail.start_latlng ?? null,
+            endLatlng: segDetail.end_latlng ?? null,
           }
         } catch (err) {
           context.warn(`Failed to score segment ${seg.id}:`, err.message)

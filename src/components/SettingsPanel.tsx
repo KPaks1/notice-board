@@ -39,6 +39,49 @@ export default function SettingsPanel({ settings, onChange }: Props) {
       </div>
 
       <div>
+        <label className="block text-sm font-semibold text-white mb-3">
+          Segment Distance
+          <span className="ml-2 font-normal text-orange-400">
+            {settings.minSegmentKm === 0 ? 'Any' : `${settings.minSegmentKm} km`}
+            {' — '}
+            {settings.maxSegmentKm} km
+          </span>
+        </label>
+        <div className="space-y-3">
+          <div>
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Min</span>
+              <span>{settings.minSegmentKm} km</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={settings.maxSegmentKm}
+              step={0.5}
+              value={settings.minSegmentKm}
+              onChange={(e) => onChange({ ...settings, minSegmentKm: Number(e.target.value) })}
+              className="w-full accent-orange-500"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Max</span>
+              <span>{settings.maxSegmentKm} km</span>
+            </div>
+            <input
+              type="range"
+              min={settings.minSegmentKm}
+              max={50}
+              step={0.5}
+              value={settings.maxSegmentKm}
+              onChange={(e) => onChange({ ...settings, maxSegmentKm: Number(e.target.value) })}
+              className="w-full accent-orange-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div>
         <p className="text-sm font-semibold text-white mb-3">Activity Type</p>
         <div className="space-y-2">
           {ACTIVITY_OPTIONS.map((opt) => (

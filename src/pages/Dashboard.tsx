@@ -1,24 +1,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { List, Map, RefreshCw } from 'lucide-react'
 import { useLocation } from '../hooks/useLocation'
 import { fetchSegments } from '../api'
-import type { ScoredSegment, Settings } from '../types'
+import type { ScoredSegment, Settings, StravaStatus } from '../types'
 import EvictionsList from '../components/EvictionsList'
+import SegmentsMap from '../components/SegmentsMap'
 import SettingsPanel from '../components/SettingsPanel'
+import ProfilePage from './ProfilePage'
 
 const SETTINGS_KEY = 'eviction-notice-settings'
-const DEFAULT_SETTINGS: Settings = {
-  radiusKm: 5,
-  activityType: 'running',
-  targetType: 'kom',
+
+function getDefaultSettings(status: StravaStatus): Settings {
+  return {
+    radiusKm: 5,
+    activityType: status.athleteType === 0 ? 'cycling' : 'running',
+    targetType: 'kom',
+    minSegmentKm: 0,
+    maxSegmentKm: 10,
+  }
 }
 
-function loadSettings(): Settings {
+function loadSettings(status: StravaStatus): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+    if (raw) return { ...getDefaultSettings(status), ...JSON.parse(raw) }
   } catch {}
-  return DEFAULT_SETTINGS
+  return getDefaultSettings(status)
 }
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -31,17 +39,19 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-type Tab = 'evictions' | 'settings'
+type Tab = 'evictions' | 'settings' | 'profile'
 
-export default function Dashboard() {
+export default function Dashboard({ stravaStatus }: { stravaStatus: StravaStatus }) {
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('evictions')
-  const [settings, setSettings] = useState<Settings>(loadSettings)
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
+  const [settings, setSettings] = useState<Settings>(() => loadSettings(stravaStatus))
   const [allSegments, setAllSegments] = useState<ScoredSegment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { coords, error: locError } = useLocation()
 
-  // Only re-fetch when activityType or targetType change, not radius
+  // Only re-fetch when activityType or targetType change, not radius or distance filter
   const fetchKey = `${settings.activityType}:${settings.targetType}`
   const prevFetchKey = useRef<string | null>(null)
 
@@ -76,15 +86,21 @@ export default function Dashboard() {
     refresh()
   }, [coords, fetchKey, refresh, allSegments.length])
 
-  // Filter cached segments by radius client-side — no API call
+  // Filter cached segments by radius + distance — no API call
   const segments = useMemo(() => {
     if (!coords) return []
-    return allSegments.filter(
-      (s) => haversineKm(coords.lat, coords.lng, s.midpointLat, s.midpointLng) <= settings.radiusKm,
-    )
-  }, [allSegments, coords, settings.radiusKm])
+    return allSegments.filter((s) => {
+      const distKm = s.distance / 1000
+      return (
+        haversineKm(coords.lat, coords.lng, s.midpointLat, s.midpointLng) <= settings.radiusKm &&
+        distKm >= settings.minSegmentKm &&
+        distKm <= settings.maxSegmentKm
+      )
+    })
+  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm])
 
   const displayError = locError ?? error
+  const isMapMode = tab === 'evictions' && viewMode === 'map'
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto">
@@ -99,33 +115,62 @@ export default function Dashboard() {
           {locError && <p className="text-xs text-red-400 mt-0.5">{locError}</p>}
         </div>
         {tab === 'evictions' && (
-          <button
-            onClick={refresh}
-            disabled={loading || !coords}
-            className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition-colors"
-            aria-label="Refresh"
-          >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+              className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              aria-label={viewMode === 'list' ? 'Switch to map' : 'Switch to list'}
+            >
+              {viewMode === 'list' ? <Map size={18} /> : <List size={18} />}
+            </button>
+            <button
+              onClick={refresh}
+              disabled={loading || !coords}
+              className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition-colors"
+              aria-label="Refresh"
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
         )}
       </header>
 
-      <main className="flex-1 px-4 pb-28 overflow-y-auto">
+      <main className={`flex-1 ${isMapMode ? 'overflow-hidden' : 'px-4 pb-28 overflow-y-auto'}`}>
         {tab === 'evictions' ? (
-          <EvictionsList
-            segments={segments}
-            loading={loading || (!coords && !locError)}
-            error={displayError}
-            onRefresh={refresh}
-          />
-        ) : (
+          viewMode === 'list' ? (
+            <EvictionsList
+              segments={segments}
+              loading={loading || (!coords && !locError)}
+              error={displayError}
+              onRefresh={refresh}
+            />
+          ) : (
+            <div className="h-full pb-14">
+              {coords ? (
+                <SegmentsMap
+                  segments={segments}
+                  userLat={coords.lat}
+                  userLng={coords.lng}
+                  onSegmentClick={(id) => navigate(`/segment/${id}`, { state: allSegments.find((s) => s.id === id) })}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                  Waiting for location…
+                </div>
+              )}
+            </div>
+          )
+        ) : tab === 'settings' ? (
           <SettingsPanel settings={settings} onChange={setSettings} />
+        ) : (
+          <ProfilePage stravaStatus={stravaStatus} />
         )}
       </main>
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 flex">
         <TabButton active={tab === 'evictions'} onClick={() => setTab('evictions')} icon="🎯" label="Evictions" />
         <TabButton active={tab === 'settings'} onClick={() => setTab('settings')} icon="⚙️" label="Settings" />
+        <TabButton active={tab === 'profile'} onClick={() => setTab('profile')} icon="👤" label="Profile" />
       </nav>
     </div>
   )

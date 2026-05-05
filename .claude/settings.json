@@ -3,7 +3,13 @@
     "allow": [
       "WebFetch(domain:strava.github.io)",
       "WebFetch(domain:developers.strava.com)",
-      "WebFetch(domain:stravalib.readthedocs.io)"
+      "WebFetch(domain:stravalib.readthedocs.io)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\pakik\\\\source\\\\repos\\\\eviction-notice\\\\api\\\\src\\\\\" -Recurse -File | Select-Object FullName)",
+      "PowerShell(Test-Path \"c:\\\\Users\\\\pakik\\\\source\\\\repos\\\\eviction-notice\\\\api\\\\src\\\\\" && \\(Get-ChildItem -Path \"c:\\\\Users\\\\pakik\\\\source\\\\repos\\\\eviction-notice\\\\api\\\\src\\\\\" -Recurse\\) || Write-Host \"Path not found\")",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")",
+      "Bash(npm show *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
     ]
   }
 }

@@ -80,6 +80,9 @@ export async function getValidToken(userId) {
     refreshToken: data.refresh_token,
     expiresAt: data.expires_at,
     athleteId: token.athleteId,
+    athleteName: token.athleteName,
+    athleteSex: token.athleteSex,
+    athleteType: token.athleteType,
   })
 
   return { accessToken: data.access_token, athleteSex: token.athleteSex, athleteType: token.athleteType }
