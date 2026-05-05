@@ -1,4 +1,5 @@
 import type { SegmentMode, ScoredSegment } from '../types'
+import type { Unit } from '../format'
 import SegmentCard from './SegmentCard'
 
 function Skeleton() {
@@ -24,9 +25,10 @@ interface Props {
   error: string | null
   onRefresh: () => void
   mode: SegmentMode
+  unit: Unit
 }
 
-export default function EvictionsList({ segments, loading, error, onRefresh, mode }: Props) {
+export default function EvictionsList({ segments, loading, error, onRefresh, mode, unit }: Props) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -70,7 +72,7 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
         {label} ({segments.length})
       </p>
-      {segments.map((s) => <SegmentCard key={s.id} segment={s} />)}
+      {segments.map((s) => <SegmentCard key={s.id} segment={s} unit={unit} />)}
     </div>
   )
 }

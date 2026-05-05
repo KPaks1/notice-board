@@ -9,6 +9,7 @@ export interface Settings {
   minSegmentKm: number
   maxSegmentKm: number
   mode: SegmentMode
+  unit: 'km' | 'mile'
 }
 
 export interface ScoredSegment {

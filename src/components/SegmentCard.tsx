@@ -1,19 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Star } from 'lucide-react'
 import type { ScoredSegment } from '../types'
-
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
-function formatDistance(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`
-  return `${Math.round(meters)} m`
-}
+import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 
 function Badge({ score }: { score: number }) {
   if (score > 0)
@@ -25,15 +13,16 @@ function Badge({ score }: { score: number }) {
 
 interface Props {
   segment: ScoredSegment
+  unit: Unit
 }
 
-export default function SegmentCard({ segment }: Props) {
+export default function SegmentCard({ segment, unit }: Props) {
   const needTime = Math.max(0, segment.targetTime - 1)
 
   return (
     <Link
       to={`/segment/${segment.id}`}
-      state={segment}
+      state={{ segment, unit }}
       className="block bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors"
     >
       <div className="flex items-start justify-between gap-3 mb-2">
@@ -45,7 +34,7 @@ export default function SegmentCard({ segment }: Props) {
       </div>
 
       <p className="text-xs text-gray-500 mb-3">
-        {formatDistance(segment.distance)}
+        {formatDistance(segment.distance, unit)}
         {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
         {segment.city && ` · ${segment.city}`}
       </p>
@@ -62,9 +51,9 @@ export default function SegmentCard({ segment }: Props) {
           </div>
         </div>
         <div className="bg-gray-800 rounded-lg p-2 text-center">
-          <div className="text-gray-400 mb-0.5">Need</div>
+          <div className="text-gray-400 mb-0.5">Pace</div>
           <div className={`font-mono font-medium ${segment.score > 0 ? 'text-green-400' : 'text-white'}`}>
-            {formatTime(needTime)}
+            {formatPace(needTime, segment.distance, unit)}
           </div>
         </div>
       </div>

@@ -5,27 +5,8 @@ import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
 import { starSegment } from '../api'
+import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 import type { ScoredSegment } from '../types'
-
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
-function formatDistance(meters: number): string {
-  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`
-  return `${Math.round(meters)} m`
-}
-
-function formatPace(seconds: number, distanceM: number): string {
-  const secsPerKm = (seconds / distanceM) * 1000
-  const m = Math.floor(secsPerKm / 60)
-  const s = Math.floor(secsPerKm % 60)
-  return `${m}:${String(s).padStart(2, '0')} /km`
-}
 
 function Badge({ score }: { score: number }) {
   if (score > 0)
@@ -47,7 +28,8 @@ function StatBox({ label, value, highlight }: { label: string; value: string; hi
 export default function SegmentDetailPage() {
   const navigate = useNavigate()
   const { state } = useLocation()
-  const segment = state as ScoredSegment | null
+  const segment: ScoredSegment | null = state?.segment ?? (state as ScoredSegment | null)
+  const unit: Unit = state?.unit ?? 'km'
   const [starred, setStarred] = useState(segment?.starred ?? false)
   const [starError, setStarError] = useState<string | null>(null)
 
@@ -110,7 +92,7 @@ export default function SegmentDetailPage() {
 
       <div className="px-4 pb-4 flex-1 overflow-y-auto space-y-5">
         <p className="text-xs text-gray-500">
-          {formatDistance(segment.distance)}
+          {formatDistance(segment.distance, unit)}
           {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
           {segment.city && ` · ${segment.city}`}
         </p>
@@ -119,7 +101,7 @@ export default function SegmentDetailPage() {
           <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} />
           <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} />
           <StatBox label="Need" value={formatTime(needTime)} highlight={segment.score > 0} />
-          <StatBox label="Pace needed" value={formatPace(needTime, segment.distance)} />
+          <StatBox label="Pace needed" value={formatPace(needTime, segment.distance, unit)} highlight={segment.score > 0} />
         </div>
         {starError && <p className="text-xs text-red-400">{starError}</p>}
 

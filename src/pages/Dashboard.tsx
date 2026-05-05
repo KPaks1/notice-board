@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { List, Map, RefreshCw } from 'lucide-react'
 import { useLocation } from '../hooks/useLocation'
 import { fetchSegments } from '../api'
+import { formatRadius } from '../format'
 import type { ScoredSegment, Settings, StravaStatus } from '../types'
 import EvictionsList from '../components/EvictionsList'
 import SegmentsMap from '../components/SegmentsMap'
@@ -19,6 +20,7 @@ function getDefaultSettings(status: StravaStatus): Settings {
     minSegmentKm: 0,
     maxSegmentKm: 10,
     mode: 'hunt',
+    unit: 'km',
   }
 }
 
@@ -114,13 +116,13 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto">
+    <div className="h-screen bg-gray-950 flex flex-col max-w-lg mx-auto">
       <header className="flex items-center justify-between px-4 pt-6 pb-4">
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
           {coords && (
             <p className="text-xs text-gray-500 mt-0.5">
-              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {settings.radiusKm} km
+              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {formatRadius(settings.radiusKm, settings.unit)}
             </p>
           )}
           {locError && <p className="text-xs text-red-400 mt-0.5">{locError}</p>}
@@ -146,7 +148,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         )}
       </header>
 
-      <main className={`flex-1 ${isMapMode ? 'overflow-hidden' : 'px-4 pb-28 overflow-y-auto'}`}>
+      <main className={`flex-1 min-h-0 ${isMapMode ? 'overflow-hidden' : 'px-4 pb-28 overflow-y-auto no-scrollbar'}`}>
         {tab === 'evictions' ? (
           viewMode === 'list' ? (
             <>
@@ -169,6 +171,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                 error={displayError}
                 onRefresh={refresh}
                 mode={settings.mode}
+                unit={settings.unit}
               />
             </>
           ) : (
@@ -178,7 +181,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                   segments={segments}
                   userLat={coords.lat}
                   userLng={coords.lng}
-                  onSegmentClick={(id) => navigate(`/segment/${id}`, { state: allSegments.find((s) => s.id === id) })}
+                  onSegmentClick={(id) => navigate(`/segment/${id}`, { state: { segment: allSegments.find((s) => s.id === id), unit: settings.unit } })}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-500 text-sm">
