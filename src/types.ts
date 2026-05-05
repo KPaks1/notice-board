@@ -37,9 +37,7 @@ export interface StravaStatus {
   athleteName?: string | null
   athleteSex?: 'M' | 'F' | null
   athleteType?: 0 | 1 | null
-  runPaceSecsPerKm?: number | null
-  ridePaceSecsPerKm?: number | null
-  paceUnit?: 'km' | 'mile'
+  bestEffortsComputed?: boolean
 }
 
 export interface EffortEntry {

@@ -32,6 +32,15 @@ function parseXomTime(xom) {
     : parts[0] * 60 + parts[1]
 }
 
+function bestEffortPaceForDistance(efforts, distanceM) {
+  if (!efforts || efforts.length === 0) return null
+  const valid = efforts.filter((e) => e.secsPerMeter != null)
+  if (valid.length === 0) return null
+  return valid.reduce((a, b) =>
+    Math.abs(a.distanceM - distanceM) < Math.abs(b.distanceM - distanceM) ? a : b
+  ).secsPerMeter
+}
+
 function targetLabel(targetType, athleteSex) {
   if (targetType === 'personal_best') return 'Your Best'
   return athleteSex === 'F' ? 'QOM' : 'KOM'
@@ -51,7 +60,7 @@ app.http('segments', {
     if (!tokenData) {
       return { status: 403, jsonBody: { error: 'Strava not connected' } }
     }
-    const { accessToken, athleteSex, runPaceSecsPerKm, ridePaceSecsPerKm } = tokenData
+    const { accessToken, athleteSex, bestEfforts } = tokenData
 
     const lat = parseFloat(request.query.get('lat') ?? '')
     const lng = parseFloat(request.query.get('lng') ?? '')
@@ -86,26 +95,24 @@ app.http('segments', {
       return { jsonBody: [] }
     }
 
-    // Use custom pace if set, otherwise fall back to Strava recent stats
-    const customPaceSecsPerKm = activityType === 'cycling' ? ridePaceSecsPerKm : runPaceSecsPerKm
+    // Fall back to Strava recent stats if best efforts not yet computed
     const statsKey = `stats:${athleteId}:${activityType}`
-    let userPaceSecsPerMeter = customPaceSecsPerKm != null
-      ? customPaceSecsPerKm / 1000
-      : cacheGet(statsKey)
-    if (userPaceSecsPerMeter === null) {
+    let statsUserPace = cacheGet(statsKey)
+    if (statsUserPace === null) {
       try {
         const stats = await stravaGet(`/athletes/${athleteId}/stats`, accessToken)
         const totals = activityType === 'cycling'
           ? stats.recent_ride_totals
           : stats.recent_run_totals
         if (totals?.moving_time && totals?.distance && totals.distance > 0) {
-          userPaceSecsPerMeter = totals.moving_time / totals.distance
-          cacheSet(statsKey, userPaceSecsPerMeter, TTL_STATS)
+          statsUserPace = totals.moving_time / totals.distance
+          cacheSet(statsKey, statsUserPace, TTL_STATS)
         }
       } catch (err) {
         context.warn('Could not fetch athlete stats:', err.message)
       }
     }
+    const effortList = activityType === 'cycling' ? bestEfforts?.ride : bestEfforts?.run
 
     const top10 = exploreResults.slice(0, 10)
 
@@ -135,6 +142,7 @@ app.http('segments', {
 
           const segDistance = seg.distance
           const requiredPaceSecsPerMeter = (targetTime - 1) / segDistance
+          const userPaceSecsPerMeter = bestEffortPaceForDistance(effortList, segDistance) ?? statsUserPace
 
           let score = -1
           if (userPaceSecsPerMeter !== null) {

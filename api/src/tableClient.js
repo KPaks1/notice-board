@@ -28,9 +28,6 @@ export async function getToken(userId) {
       athleteName: entity.athleteName ?? null,
       athleteSex: entity.athleteSex ?? null,
       athleteType: entity.athleteType != null ? Number(entity.athleteType) : null,
-      runPaceSecsPerKm: entity.runPaceSecsPerKm ? Number(entity.runPaceSecsPerKm) : null,
-      ridePaceSecsPerKm: entity.ridePaceSecsPerKm ? Number(entity.ridePaceSecsPerKm) : null,
-      paceUnit: entity.paceUnit || 'km',
       bestEfforts: entity.bestEfforts ? JSON.parse(entity.bestEfforts) : null,
       bestEffortsUpdatedAt: entity.bestEffortsUpdatedAt || null,
     }
@@ -43,7 +40,6 @@ export async function getToken(userId) {
 export async function saveToken(userId, {
   accessToken, refreshToken, expiresAt, athleteId,
   athleteName, athleteSex, athleteType,
-  runPaceSecsPerKm, ridePaceSecsPerKm, paceUnit,
   bestEfforts, bestEffortsUpdatedAt,
 }) {
   const client = await getClientReady()
@@ -58,9 +54,6 @@ export async function saveToken(userId, {
       athleteName: athleteName ?? '',
       athleteSex: athleteSex ?? '',
       athleteType: athleteType != null ? String(athleteType) : '',
-      runPaceSecsPerKm: runPaceSecsPerKm != null ? String(runPaceSecsPerKm) : '',
-      ridePaceSecsPerKm: ridePaceSecsPerKm != null ? String(ridePaceSecsPerKm) : '',
-      paceUnit: paceUnit ?? 'km',
       bestEfforts: bestEfforts != null ? JSON.stringify(bestEfforts) : '',
       bestEffortsUpdatedAt: bestEffortsUpdatedAt ?? '',
     },
@@ -77,8 +70,7 @@ export async function getValidToken(userId) {
       accessToken: token.accessToken,
       athleteSex: token.athleteSex,
       athleteType: token.athleteType,
-      runPaceSecsPerKm: token.runPaceSecsPerKm,
-      ridePaceSecsPerKm: token.ridePaceSecsPerKm,
+      bestEfforts: token.bestEfforts,
     }
   }
 
@@ -104,9 +96,6 @@ export async function getValidToken(userId) {
     athleteName: token.athleteName,
     athleteSex: token.athleteSex,
     athleteType: token.athleteType,
-    runPaceSecsPerKm: token.runPaceSecsPerKm,
-    ridePaceSecsPerKm: token.ridePaceSecsPerKm,
-    paceUnit: token.paceUnit,
     bestEfforts: token.bestEfforts,
     bestEffortsUpdatedAt: token.bestEffortsUpdatedAt,
   })
@@ -115,7 +104,6 @@ export async function getValidToken(userId) {
     accessToken: data.access_token,
     athleteSex: token.athleteSex,
     athleteType: token.athleteType,
-    runPaceSecsPerKm: token.runPaceSecsPerKm,
-    ridePaceSecsPerKm: token.ridePaceSecsPerKm,
+    bestEfforts: token.bestEfforts,
   }
 }

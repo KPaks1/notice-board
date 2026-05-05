@@ -17,7 +17,8 @@ function authHeaders(): Record<string, string> {
 
 export async function fetchStravaStatus(): Promise<StravaStatus> {
   const res = await fetch('/api/strava-status', { headers: authHeaders() })
-  if (!res.ok) throw new Error('Failed to fetch Strava status')
+  if (res.status === 401) return { connected: false }
+  if (!res.ok) throw new Error(`status ${res.status}`)
   return res.json()
 }
 
@@ -53,18 +54,6 @@ export async function starSegment(id: number, starred: boolean): Promise<void> {
   }
 }
 
-export async function updateUserSettings(settings: {
-  runPaceSecsPerKm?: number | null
-  ridePaceSecsPerKm?: number | null
-  paceUnit?: 'km' | 'mile'
-}): Promise<void> {
-  const res = await fetch('/api/user-settings', {
-    method: 'PUT',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings),
-  })
-  if (!res.ok) throw new Error('Failed to save settings')
-}
 
 export async function fetchAthleteEfforts(): Promise<BestEffortsResponse> {
   const res = await fetch('/api/athlete-efforts', { headers: authHeaders() })

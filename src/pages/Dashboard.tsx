@@ -44,7 +44,7 @@ type Tab = 'evictions' | 'settings' | 'profile'
 
 export default function Dashboard({ stravaStatus: initialStravaStatus }: { stravaStatus: StravaStatus }) {
   const navigate = useNavigate()
-  const [stravaStatus, setStravaStatus] = useState(initialStravaStatus)
+  const stravaStatus = initialStravaStatus
   const [tab, setTab] = useState<Tab>('evictions')
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [settings, setSettings] = useState<Settings>(() => loadSettings(stravaStatus))
@@ -112,16 +112,6 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const displayError = locError ?? error
   const isMapMode = tab === 'evictions' && viewMode === 'map'
 
-  const activePaceSecsPerKm =
-    settings.activityType === 'running' ? stravaStatus.runPaceSecsPerKm : stravaStatus.ridePaceSecsPerKm
-  const paceLabel = (() => {
-    if (!activePaceSecsPerKm) return null
-    const unit = stravaStatus.paceUnit ?? 'km'
-    const secs = unit === 'mile' ? activePaceSecsPerKm * 1.60934 : activePaceSecsPerKm
-    const m = Math.floor(secs / 60)
-    const s = Math.floor(secs % 60)
-    return `${m}:${String(s).padStart(2, '0')} /${unit === 'mile' ? 'mi' : 'km'}`
-  })()
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto">
@@ -130,7 +120,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
           {coords && (
             <p className="text-xs text-gray-500 mt-0.5">
-              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {settings.radiusKm} km{paceLabel && ` · ${paceLabel}`}
+              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {settings.radiusKm} km
             </p>
           )}
           {locError && <p className="text-xs text-red-400 mt-0.5">{locError}</p>}
@@ -200,13 +190,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         ) : tab === 'settings' ? (
           <SettingsPanel settings={settings} onChange={setSettings} />
         ) : (
-          <ProfilePage
-            stravaStatus={stravaStatus}
-            onPaceSaved={(update) => {
-              setStravaStatus((s) => ({ ...s, ...update }))
-              refresh()
-            }}
-          />
+          <ProfilePage stravaStatus={stravaStatus} />
         )}
       </main>
 

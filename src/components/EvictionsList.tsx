@@ -56,7 +56,7 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
         <p className="text-white font-medium mb-1">No segments found</p>
         <p className="text-gray-400 text-sm">
           {mode === 'hunt'
-            ? 'No segments within 35% of your pace nearby. Try a wider radius or adjust your pace in Profile.'
+            ? 'No segments within 35% of your pace nearby. Try a wider radius.'
             : 'No beatable segments nearby. Try Hunt mode to find segments within reach.'}
         </p>
       </div>
