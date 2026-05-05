@@ -1,0 +1,13 @@
+{
+  "name": "eviction-notice-api",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/data-tables": "^13.0.0",
+    "@azure/functions": "^4.0.0"
+  }
+}
