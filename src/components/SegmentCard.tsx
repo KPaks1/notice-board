@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Star } from 'lucide-react'
 import type { ScoredSegment } from '../types'
 
 function formatTime(seconds: number): string {
@@ -37,7 +38,10 @@ export default function SegmentCard({ segment }: Props) {
     >
       <div className="flex items-start justify-between gap-3 mb-2">
         <h3 className="text-white font-medium text-sm leading-snug flex-1">{segment.name}</h3>
-        <Badge score={segment.score} />
+        <div className="flex items-center gap-1.5 shrink-0">
+          {segment.starred && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
+          <Badge score={segment.score} />
+        </div>
       </div>
 
       <p className="text-xs text-gray-500 mb-3">

@@ -51,7 +51,7 @@ app.http('segments', {
     if (!tokenData) {
       return { status: 403, jsonBody: { error: 'Strava not connected' } }
     }
-    const { accessToken, athleteSex } = tokenData
+    const { accessToken, athleteSex, runPaceSecsPerKm, ridePaceSecsPerKm } = tokenData
 
     const lat = parseFloat(request.query.get('lat') ?? '')
     const lng = parseFloat(request.query.get('lng') ?? '')
@@ -86,8 +86,12 @@ app.http('segments', {
       return { jsonBody: [] }
     }
 
+    // Use custom pace if set, otherwise fall back to Strava recent stats
+    const customPaceSecsPerKm = activityType === 'cycling' ? ridePaceSecsPerKm : runPaceSecsPerKm
     const statsKey = `stats:${athleteId}:${activityType}`
-    let userPaceSecsPerMeter = cacheGet(statsKey)
+    let userPaceSecsPerMeter = customPaceSecsPerKm != null
+      ? customPaceSecsPerKm / 1000
+      : cacheGet(statsKey)
     if (userPaceSecsPerMeter === null) {
       try {
         const stats = await stravaGet(`/athletes/${athleteId}/stats`, accessToken)
@@ -160,6 +164,7 @@ app.http('segments', {
             polyline: segDetail.map?.polyline ?? null,
             startLatlng: segDetail.start_latlng ?? null,
             endLatlng: segDetail.end_latlng ?? null,
+            starred: segDetail.starred ?? false,
           }
         } catch (err) {
           context.warn(`Failed to score segment ${seg.id}:`, err.message)

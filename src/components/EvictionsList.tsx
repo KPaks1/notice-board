@@ -1,4 +1,4 @@
-import type { ScoredSegment } from '../types'
+import type { SegmentMode, ScoredSegment } from '../types'
 import SegmentCard from './SegmentCard'
 
 function Skeleton() {
@@ -23,9 +23,10 @@ interface Props {
   loading: boolean
   error: string | null
   onRefresh: () => void
+  mode: SegmentMode
 }
 
-export default function EvictionsList({ segments, loading, error, onRefresh }: Props) {
+export default function EvictionsList({ segments, loading, error, onRefresh, mode }: Props) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -53,36 +54,23 @@ export default function EvictionsList({ segments, loading, error, onRefresh }: P
       <div className="text-center py-16">
         <p className="text-4xl mb-4">🏳️</p>
         <p className="text-white font-medium mb-1">No segments found</p>
-        <p className="text-gray-400 text-sm">Try increasing your search radius in Settings.</p>
+        <p className="text-gray-400 text-sm">
+          {mode === 'hunt'
+            ? 'No segments within 35% of your pace nearby. Try a wider radius or adjust your pace in Profile.'
+            : 'No beatable segments nearby. Try Hunt mode to find segments within reach.'}
+        </p>
       </div>
     )
   }
 
-  const beatable = segments.filter((s) => s.score > 0)
-  const rest = segments.filter((s) => s.score <= 0)
+  const label = mode === 'hunt' ? '🎯 In Range' : '🌾 Easy Wins'
 
   return (
-    <div className="space-y-4">
-      {beatable.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-2 px-1">
-            Beatable ({beatable.length})
-          </p>
-          <div className="space-y-3">
-            {beatable.map((s) => <SegmentCard key={s.id} segment={s} />)}
-          </div>
-        </div>
-      )}
-      {rest.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1 mt-4">
-            Not yet ({rest.length})
-          </p>
-          <div className="space-y-3">
-            {rest.map((s) => <SegmentCard key={s.id} segment={s} />)}
-          </div>
-        </div>
-      )}
+    <div className="space-y-3">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+        {label} ({segments.length})
+      </p>
+      {segments.map((s) => <SegmentCard key={s.id} segment={s} />)}
     </div>
   )
 }

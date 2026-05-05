@@ -18,6 +18,7 @@ function getDefaultSettings(status: StravaStatus): Settings {
     targetType: 'kom',
     minSegmentKm: 0,
     maxSegmentKm: 10,
+    mode: 'hunt',
   }
 }
 
@@ -41,8 +42,9 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 
 type Tab = 'evictions' | 'settings' | 'profile'
 
-export default function Dashboard({ stravaStatus }: { stravaStatus: StravaStatus }) {
+export default function Dashboard({ stravaStatus: initialStravaStatus }: { stravaStatus: StravaStatus }) {
   const navigate = useNavigate()
+  const [stravaStatus, setStravaStatus] = useState(initialStravaStatus)
   const [tab, setTab] = useState<Tab>('evictions')
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [settings, setSettings] = useState<Settings>(() => loadSettings(stravaStatus))
@@ -86,10 +88,10 @@ export default function Dashboard({ stravaStatus }: { stravaStatus: StravaStatus
     refresh()
   }, [coords, fetchKey, refresh, allSegments.length])
 
-  // Filter cached segments by radius + distance — no API call
+  // Filter cached segments by radius + distance + mode — no API call
   const segments = useMemo(() => {
     if (!coords) return []
-    return allSegments.filter((s) => {
+    let filtered = allSegments.filter((s) => {
       const distKm = s.distance / 1000
       return (
         haversineKm(coords.lat, coords.lng, s.midpointLat, s.midpointLng) <= settings.radiusKm &&
@@ -97,10 +99,29 @@ export default function Dashboard({ stravaStatus }: { stravaStatus: StravaStatus
         distKm <= settings.maxSegmentKm
       )
     })
-  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm])
+    if (settings.mode === 'hunt') {
+      filtered = filtered.filter((s) => s.score >= -0.35 && s.score <= 0.35)
+      filtered.sort((a, b) => a.score - b.score)
+    } else {
+      filtered = filtered.filter((s) => s.score > 0)
+      filtered.sort((a, b) => b.score - a.score)
+    }
+    return filtered
+  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.mode])
 
   const displayError = locError ?? error
   const isMapMode = tab === 'evictions' && viewMode === 'map'
+
+  const activePaceSecsPerKm =
+    settings.activityType === 'running' ? stravaStatus.runPaceSecsPerKm : stravaStatus.ridePaceSecsPerKm
+  const paceLabel = (() => {
+    if (!activePaceSecsPerKm) return null
+    const unit = stravaStatus.paceUnit ?? 'km'
+    const secs = unit === 'mile' ? activePaceSecsPerKm * 1.60934 : activePaceSecsPerKm
+    const m = Math.floor(secs / 60)
+    const s = Math.floor(secs % 60)
+    return `${m}:${String(s).padStart(2, '0')} /${unit === 'mile' ? 'mi' : 'km'}`
+  })()
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto">
@@ -109,7 +130,7 @@ export default function Dashboard({ stravaStatus }: { stravaStatus: StravaStatus
           <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
           {coords && (
             <p className="text-xs text-gray-500 mt-0.5">
-              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {settings.radiusKm} km radius
+              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {settings.radiusKm} km{paceLabel && ` · ${paceLabel}`}
             </p>
           )}
           {locError && <p className="text-xs text-red-400 mt-0.5">{locError}</p>}
@@ -138,12 +159,28 @@ export default function Dashboard({ stravaStatus }: { stravaStatus: StravaStatus
       <main className={`flex-1 ${isMapMode ? 'overflow-hidden' : 'px-4 pb-28 overflow-y-auto'}`}>
         {tab === 'evictions' ? (
           viewMode === 'list' ? (
-            <EvictionsList
-              segments={segments}
-              loading={loading || (!coords && !locError)}
-              error={displayError}
-              onRefresh={refresh}
-            />
+            <>
+              <div className="flex gap-1 mb-4">
+                {(['hunt', 'harvest'] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setSettings({ ...settings, mode: m })}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+                      settings.mode === m ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {m === 'hunt' ? '🎯 Hunt' : '🌾 Harvest'}
+                  </button>
+                ))}
+              </div>
+              <EvictionsList
+                segments={segments}
+                loading={loading || (!coords && !locError)}
+                error={displayError}
+                onRefresh={refresh}
+                mode={settings.mode}
+              />
+            </>
           ) : (
             <div className="h-full pb-14">
               {coords ? (
@@ -163,7 +200,13 @@ export default function Dashboard({ stravaStatus }: { stravaStatus: StravaStatus
         ) : tab === 'settings' ? (
           <SettingsPanel settings={settings} onChange={setSettings} />
         ) : (
-          <ProfilePage stravaStatus={stravaStatus} />
+          <ProfilePage
+            stravaStatus={stravaStatus}
+            onPaceSaved={(update) => {
+              setStravaStatus((s) => ({ ...s, ...update }))
+              refresh()
+            }}
+          />
         )}
       </main>
 

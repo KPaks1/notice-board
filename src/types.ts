@@ -1,5 +1,6 @@
 export type ActivityType = 'running' | 'cycling'
 export type TargetType = 'kom' | 'personal_best'
+export type SegmentMode = 'hunt' | 'harvest'
 
 export interface Settings {
   radiusKm: number
@@ -7,6 +8,7 @@ export interface Settings {
   targetType: TargetType
   minSegmentKm: number
   maxSegmentKm: number
+  mode: SegmentMode
 }
 
 export interface ScoredSegment {
@@ -26,6 +28,7 @@ export interface ScoredSegment {
   polyline: string | null
   startLatlng: [number, number] | null
   endLatlng: [number, number] | null
+  starred: boolean
 }
 
 export interface StravaStatus {
@@ -34,4 +37,7 @@ export interface StravaStatus {
   athleteName?: string | null
   athleteSex?: 'M' | 'F' | null
   athleteType?: 0 | 1 | null
+  runPaceSecsPerKm?: number | null
+  ridePaceSecsPerKm?: number | null
+  paceUnit?: 'km' | 'mile'
 }

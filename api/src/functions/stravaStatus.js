@@ -24,6 +24,9 @@ app.http('stravaStatus', {
         athleteName: token.athleteName ?? null,
         athleteSex: token.athleteSex ?? null,
         athleteType: token.athleteType ?? null,
+        runPaceSecsPerKm: token.runPaceSecsPerKm ?? null,
+        ridePaceSecsPerKm: token.ridePaceSecsPerKm ?? null,
+        paceUnit: token.paceUnit ?? 'km',
       },
     }
   },

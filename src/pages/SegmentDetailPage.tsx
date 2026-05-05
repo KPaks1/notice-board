@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ExternalLink } from 'lucide-react'
+import { ChevronLeft, ExternalLink, Star } from 'lucide-react'
 import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
+import { starSegment } from '../api'
 import type { ScoredSegment } from '../types'
 
 function formatTime(seconds: number): string {
@@ -46,6 +48,26 @@ export default function SegmentDetailPage() {
   const navigate = useNavigate()
   const { state } = useLocation()
   const segment = state as ScoredSegment | null
+  const [starred, setStarred] = useState(segment?.starred ?? false)
+  const [starError, setStarError] = useState<string | null>(null)
+
+  async function toggleStar() {
+    if (!segment) return
+    const next = !starred
+    setStarred(next)
+    setStarError(null)
+    try {
+      await starSegment(segment.id, next)
+    } catch (e) {
+      setStarred(!next)
+      const msg = e instanceof Error ? e.message : ''
+      setStarError(
+        msg === 'scope_required'
+          ? 'Re-connect Strava with "View starred segments" permission to star segments.'
+          : 'Failed to update star.',
+      )
+    }
+  }
 
   if (!segment) {
     return (
@@ -76,6 +98,13 @@ export default function SegmentDetailPage() {
           <ChevronLeft size={22} />
         </button>
         <h1 className="text-base font-semibold text-white leading-snug flex-1 line-clamp-2">{segment.name}</h1>
+        <button
+          onClick={toggleStar}
+          className="p-1 rounded-lg text-gray-400 hover:text-white transition-colors"
+          aria-label={starred ? 'Unstar segment' : 'Star segment'}
+        >
+          <Star size={20} className={starred ? 'text-yellow-400 fill-yellow-400' : ''} />
+        </button>
         <Badge score={segment.score} />
       </header>
 
@@ -92,6 +121,7 @@ export default function SegmentDetailPage() {
           <StatBox label="Need" value={formatTime(needTime)} highlight={segment.score > 0} />
           <StatBox label="Pace needed" value={formatPace(needTime, segment.distance)} />
         </div>
+        {starError && <p className="text-xs text-red-400">{starError}</p>}
 
         {decodedPath && mapBounds ? (
           <div className="rounded-xl overflow-hidden" style={{ height: '240px' }}>

@@ -40,3 +40,28 @@ export async function fetchSegments(
   }
   return res.json()
 }
+
+export async function starSegment(id: number, starred: boolean): Promise<void> {
+  const res = await fetch(`/api/segment-star?id=${id}`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ starred }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? 'Failed to star segment')
+  }
+}
+
+export async function updateUserSettings(settings: {
+  runPaceSecsPerKm?: number | null
+  ridePaceSecsPerKm?: number | null
+  paceUnit?: 'km' | 'mile'
+}): Promise<void> {
+  const res = await fetch('/api/user-settings', {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  })
+  if (!res.ok) throw new Error('Failed to save settings')
+}
