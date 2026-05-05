@@ -4,7 +4,7 @@ import { ChevronLeft, ExternalLink, Star } from 'lucide-react'
 import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
-import { starSegment } from '../api'
+import { clearToken, starSegment } from '../api'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 import type { ScoredSegment } from '../types'
 
@@ -45,7 +45,7 @@ export default function SegmentDetailPage() {
       const msg = e instanceof Error ? e.message : ''
       setStarError(
         msg === 'scope_required'
-          ? 'Re-connect Strava with "View starred segments" permission to star segments.'
+          ? 'Disconnect and reconnect Strava to enable starring segments.'
           : 'Failed to update star.',
       )
     }
@@ -103,7 +103,19 @@ export default function SegmentDetailPage() {
           <StatBox label="Need" value={formatTime(needTime)} highlight={segment.score > 0} />
           <StatBox label="Pace needed" value={formatPace(needTime, segment.distance, unit)} highlight={segment.score > 0} />
         </div>
-        {starError && <p className="text-xs text-red-400">{starError}</p>}
+        {starError && (
+          <div className="flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-3 py-2">
+            <p className="text-xs text-red-400">{starError}</p>
+            {starError.includes('reconnect') && (
+              <button
+                onClick={() => { clearToken(); navigate('/connect-strava', { replace: true }) }}
+                className="text-xs text-orange-400 hover:text-orange-300 shrink-0"
+              >
+                Reconnect
+              </button>
+            )}
+          </div>
+        )}
 
         {decodedPath && mapBounds ? (
           <div className="rounded-xl overflow-hidden" style={{ height: '240px' }}>

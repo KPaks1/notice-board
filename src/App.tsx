@@ -69,14 +69,17 @@ function SetupScreen() {
   )
 }
 
+let sessionOnboardingDone = false
+
 function OnboardingGate({ status }: { status: StravaStatus }) {
-  const [ready, setReady] = useState(status.bestEffortsComputed ?? false)
+  const alreadyDone = sessionOnboardingDone || (status.bestEffortsComputed ?? false)
+  const [ready, setReady] = useState(alreadyDone)
 
   useEffect(() => {
     if (ready) return
     refreshAthleteEfforts()
-      .then(() => setReady(true))
-      .catch(() => setReady(true))
+      .then(() => { sessionOnboardingDone = true; setReady(true) })
+      .catch(() => { sessionOnboardingDone = true; setReady(true) })
   }, [])
 
   if (!ready) return <SetupScreen />

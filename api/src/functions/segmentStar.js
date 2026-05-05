@@ -40,7 +40,7 @@ app.http('segmentStar', {
       body: JSON.stringify({ starred }),
     })
 
-    if (res.status === 403) {
+    if (res.status === 401 || res.status === 403) {
       return { status: 403, jsonBody: { error: 'scope_required' } }
     }
 
