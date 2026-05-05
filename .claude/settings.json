@@ -10,7 +10,8 @@
       "Bash(npm show *)",
       "Bash(npm install *)",
       "Bash(npm run *)",
-      "Bash(del \"c:\\\\Users\\\\pakik\\\\source\\\\repos\\\\eviction-notice\\\\api\\\\src\\\\functions\\\\userSettings.js\")"
+      "Bash(del \"c:\\\\Users\\\\pakik\\\\source\\\\repos\\\\eviction-notice\\\\api\\\\src\\\\functions\\\\userSettings.js\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\pakik\\\\source\\\\repos\\\\eviction-notice\\\\api\\\\src\\\\\" -File | Select-Object Name)"
     ]
   }
 }

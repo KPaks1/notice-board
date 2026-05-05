@@ -1,4 +1,15 @@
+import { useSearchParams } from 'react-router-dom'
+
+const ERROR_MESSAGES: Record<string, string> = {
+  denied: 'Strava authorisation was denied or failed. Please try again.',
+  'token-exchange': 'Could not exchange the Strava code for a token. Check your app credentials.',
+}
+
 export default function ConnectStrava() {
+  const [searchParams] = useSearchParams()
+  const errorCode = searchParams.get('error')
+  const errorMessage = errorCode ? (ERROR_MESSAGES[errorCode] ?? 'Something went wrong. Please try again.') : null
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-10 w-full max-w-sm text-center shadow-xl">
@@ -21,6 +32,9 @@ export default function ConnectStrava() {
           <StravaIcon />
           Connect with Strava
         </a>
+        {errorMessage && (
+          <p className="mt-4 text-xs text-red-400">{errorMessage}</p>
+        )}
       </div>
     </div>
   )
