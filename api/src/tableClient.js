@@ -31,6 +31,8 @@ export async function getToken(userId) {
       runPaceSecsPerKm: entity.runPaceSecsPerKm ? Number(entity.runPaceSecsPerKm) : null,
       ridePaceSecsPerKm: entity.ridePaceSecsPerKm ? Number(entity.ridePaceSecsPerKm) : null,
       paceUnit: entity.paceUnit || 'km',
+      bestEfforts: entity.bestEfforts ? JSON.parse(entity.bestEfforts) : null,
+      bestEffortsUpdatedAt: entity.bestEffortsUpdatedAt || null,
     }
   } catch (err) {
     if (err.statusCode === 404) return null
@@ -42,6 +44,7 @@ export async function saveToken(userId, {
   accessToken, refreshToken, expiresAt, athleteId,
   athleteName, athleteSex, athleteType,
   runPaceSecsPerKm, ridePaceSecsPerKm, paceUnit,
+  bestEfforts, bestEffortsUpdatedAt,
 }) {
   const client = await getClientReady()
   await client.upsertEntity(
@@ -58,6 +61,8 @@ export async function saveToken(userId, {
       runPaceSecsPerKm: runPaceSecsPerKm != null ? String(runPaceSecsPerKm) : '',
       ridePaceSecsPerKm: ridePaceSecsPerKm != null ? String(ridePaceSecsPerKm) : '',
       paceUnit: paceUnit ?? 'km',
+      bestEfforts: bestEfforts != null ? JSON.stringify(bestEfforts) : '',
+      bestEffortsUpdatedAt: bestEffortsUpdatedAt ?? '',
     },
     'Replace',
   )
@@ -102,6 +107,8 @@ export async function getValidToken(userId) {
     runPaceSecsPerKm: token.runPaceSecsPerKm,
     ridePaceSecsPerKm: token.ridePaceSecsPerKm,
     paceUnit: token.paceUnit,
+    bestEfforts: token.bestEfforts,
+    bestEffortsUpdatedAt: token.bestEffortsUpdatedAt,
   })
 
   return {

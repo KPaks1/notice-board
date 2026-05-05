@@ -41,3 +41,20 @@ export interface StravaStatus {
   ridePaceSecsPerKm?: number | null
   paceUnit?: 'km' | 'mile'
 }
+
+export interface EffortEntry {
+  distanceM: number
+  label: string
+  secsPerMeter: number | null
+  estimatedSecs: number | null
+  source: 'measured' | 'riegel'
+}
+
+export interface BestEfforts {
+  computed: true
+  run: EffortEntry[]
+  ride: EffortEntry[]
+  computedAt: string
+}
+
+export type BestEffortsResponse = BestEfforts | { computed: false }

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { clearToken, updateUserSettings } from '../api'
-import type { StravaStatus } from '../types'
+import { clearToken, fetchAthleteEfforts, refreshAthleteEfforts, updateUserSettings } from '../api'
+import type { BestEffortsResponse, EffortEntry, StravaStatus } from '../types'
 
 interface Props {
   stravaStatus: StravaStatus
@@ -21,6 +21,25 @@ function parsePaceInput(input: string, unit: 'km' | 'mile'): number | null {
   if (!match) return null
   const secs = parseInt(match[1]) * 60 + parseInt(match[2])
   return unit === 'mile' ? secs / 1.60934 : secs
+}
+
+function formatTime(secs: number | null): string {
+  if (secs == null) return '—'
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = Math.floor(secs % 60)
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function EffortCard({ entry }: { entry: EffortEntry }) {
+  return (
+    <div className="bg-gray-800 rounded-xl p-3 text-center">
+      <p className="text-xs text-gray-400 mb-1">{entry.label}</p>
+      <p className="text-sm font-mono text-white">{formatTime(entry.estimatedSecs)}</p>
+      {entry.source === 'riegel' && <p className="text-xs text-gray-600 mt-0.5">est.</p>}
+    </div>
+  )
 }
 
 function initials(name?: string | null): string {
@@ -45,6 +64,25 @@ export default function ProfilePage({ stravaStatus, onPaceSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [efforts, setEfforts] = useState<BestEffortsResponse | null>(null)
+  const [effortsLoading, setEffortsLoading] = useState(false)
+  const [effortsError, setEffortsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchAthleteEfforts().then(setEfforts).catch(() => setEfforts({ computed: false }))
+  }, [])
+
+  async function handleComputeEfforts() {
+    setEffortsLoading(true)
+    setEffortsError(null)
+    try {
+      setEfforts(await refreshAthleteEfforts())
+    } catch (e) {
+      setEffortsError(e instanceof Error ? e.message : 'Failed to compute')
+    } finally {
+      setEffortsLoading(false)
+    }
+  }
 
   function handleUnitToggle(newUnit: 'km' | 'mile') {
     if (newUnit === paceUnit) return
@@ -150,6 +188,49 @@ export default function ProfilePage({ stravaStatus, onPaceSaved }: Props) {
         >
           {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save Pace Settings'}
         </button>
+      </div>
+
+      <div className="space-y-4 pt-4 border-t border-gray-800">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-300">Estimated Times</h3>
+          <button
+            onClick={handleComputeEfforts}
+            disabled={effortsLoading}
+            className="text-xs text-orange-400 hover:text-orange-300 disabled:opacity-50"
+          >
+            {effortsLoading ? 'Computing…' : efforts?.computed ? 'Refresh' : 'Compute'}
+          </button>
+        </div>
+
+        {effortsError && <p className="text-xs text-red-400">{effortsError}</p>}
+
+        {effortsLoading && (
+          <div className="grid grid-cols-3 gap-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="bg-gray-800 rounded-xl h-16 animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {!effortsLoading && efforts?.computed && (() => {
+          const list = stravaStatus.athleteType === 0 ? efforts.ride : efforts.run
+          return (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                {list.map((e) => <EffortCard key={e.distanceM} entry={e} />)}
+              </div>
+              <p className="text-xs text-gray-500">
+                Based on last 200 activities · Updated {new Date(efforts.computedAt).toLocaleDateString()}
+              </p>
+            </>
+          )
+        })()}
+
+        {!effortsLoading && efforts && !efforts.computed && (
+          <p className="text-xs text-gray-500">
+            No data yet. Tap Compute to estimate your times from recent activities.
+          </p>
+        )}
       </div>
 
       <div className="pt-4 border-t border-gray-800">

@@ -1,4 +1,4 @@
-import type { ScoredSegment, StravaStatus } from './types'
+import type { BestEffortsResponse, ScoredSegment, StravaStatus } from './types'
 
 export const TOKEN_KEY = 'en_token'
 
@@ -64,4 +64,19 @@ export async function updateUserSettings(settings: {
     body: JSON.stringify(settings),
   })
   if (!res.ok) throw new Error('Failed to save settings')
+}
+
+export async function fetchAthleteEfforts(): Promise<BestEffortsResponse> {
+  const res = await fetch('/api/athlete-efforts', { headers: authHeaders() })
+  if (!res.ok) throw new Error('Failed to fetch athlete efforts')
+  return res.json()
+}
+
+export async function refreshAthleteEfforts(): Promise<BestEffortsResponse> {
+  const res = await fetch('/api/athlete-efforts/refresh', {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to refresh athlete efforts')
+  return res.json()
 }
