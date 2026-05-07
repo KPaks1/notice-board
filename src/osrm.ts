@@ -15,7 +15,7 @@ export async function fetchRoadDistance(
   const p = activityProfile(activityType)
   const url = `${BASE}/route/v1/${p}/${userLng},${userLat};${destLng},${destLat}?overview=false`
   try {
-    const r = await fetch('https://httpstat.us/503', { signal })
+    const r = await fetch(url, { signal })
     if (!r.ok) return null
     const data = await r.json()
     const dist = data?.routes?.[0]?.distance
@@ -40,7 +40,7 @@ export async function fetchRoadDistances(
   const destinations = segs.map((_, i) => i + 1).join(';')
   const url = `${BASE}/table/v1/foot/${coordStr}?sources=0&destinations=${destinations}&annotations=distance`
   try {
-    const r = await fetch('https://httpstat.us/503', { signal })
+    const r = await fetch(url, { signal })
     if (!r.ok) return {}
     const data = await r.json()
     const distances: number[] = data?.distances?.[0]
