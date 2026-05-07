@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clearToken, fetchAthleteEfforts, refreshAthleteEfforts } from '../api'
+import { formatPace } from '../format'
+import type { Unit } from '../format'
 import type { BestEffortsResponse, EffortEntry, StravaStatus } from '../types'
 
 interface Props {
   stravaStatus: StravaStatus
+  unit: Unit
 }
 
 function formatTime(secs: number | null): string {
@@ -16,11 +19,14 @@ function formatTime(secs: number | null): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function EffortCard({ entry }: { entry: EffortEntry }) {
+function EffortCard({ entry, unit }: { entry: EffortEntry; unit: Unit }) {
   return (
     <div className="bg-gray-800 rounded-xl p-3 text-center">
       <p className="text-xs text-gray-400 mb-1">{entry.label}</p>
       <p className="text-sm font-mono text-white">{formatTime(entry.estimatedSecs)}</p>
+      <p className="text-xs font-mono text-gray-500 mt-0.5">
+        {entry.estimatedSecs != null ? formatPace(entry.estimatedSecs, entry.distanceM, unit) : '—'}
+      </p>
     </div>
   )
 }
@@ -35,7 +41,7 @@ function initials(name?: string | null): string {
     .slice(0, 2)
 }
 
-export default function ProfilePage({ stravaStatus }: Props) {
+export default function ProfilePage({ stravaStatus, unit }: Props) {
   const navigate = useNavigate()
   const [efforts, setEfforts] = useState<BestEffortsResponse | null>(null)
   const [effortsLoading, setEffortsLoading] = useState(false)
@@ -115,7 +121,7 @@ export default function ProfilePage({ stravaStatus }: Props) {
           return (
             <>
               <div className="grid grid-cols-3 gap-2">
-                {list.map((e) => <EffortCard key={e.distanceM} entry={e} />)}
+                {list.map((e) => <EffortCard key={e.distanceM} entry={e} unit={unit} />)}
               </div>
               <p className="text-xs text-gray-500">
                 Based on last 200 activities · Updated {new Date(efforts.computedAt).toLocaleDateString()}

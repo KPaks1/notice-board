@@ -193,7 +193,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         ) : tab === 'settings' ? (
           <SettingsPanel settings={settings} onChange={setSettings} />
         ) : (
-          <ProfilePage stravaStatus={stravaStatus} />
+          <ProfilePage stravaStatus={stravaStatus} unit={settings.unit} />
         )}
       </main>
 

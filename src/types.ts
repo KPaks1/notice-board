@@ -46,7 +46,7 @@ export interface EffortEntry {
   label: string
   secsPerMeter: number | null
   estimatedSecs: number | null
-  source: 'measured' | 'riegel'
+  source: 'measured' | 'riegel' | 'cs' | 'sprint'
 }
 
 export interface BestEfforts {
