@@ -183,7 +183,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                   segments={segments}
                   userLat={coords.lat}
                   userLng={coords.lng}
-                  onSegmentClick={(id) => navigate(`/segment/${id}`, { state: { segment: allSegments.find((s) => s.id === id), unit: settings.unit } })}
+                  onSegmentClick={(id) => navigate(`/segment/${id}`, { state: { segment: allSegments.find((s) => s.id === id), unit: settings.unit, userLat: coords?.lat, userLng: coords?.lng } })}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-500 text-sm">

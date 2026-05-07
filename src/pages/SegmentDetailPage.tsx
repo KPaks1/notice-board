@@ -1,12 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ExternalLink, Star } from 'lucide-react'
-import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet'
+import { ChevronLeft, Crosshair, ExternalLink, LocateFixed, Star } from 'lucide-react'
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
 import { clearToken, starSegment } from '../api'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 import type { ScoredSegment } from '../types'
+
+function MapController({ onReady }: { onReady: (map: L.Map) => void }) {
+  const map = useMap()
+  useEffect(() => { onReady(map) }, [map, onReady])
+  return null
+}
 
 function Badge({ score }: { score: number }) {
   if (score > 0)
@@ -32,6 +38,7 @@ export default function SegmentDetailPage() {
   const unit: Unit = state?.unit ?? 'km'
   const [starred, setStarred] = useState(segment?.starred ?? false)
   const [starError, setStarError] = useState<string | null>(null)
+  const mapRef = useRef<L.Map | null>(null)
 
   async function toggleStar() {
     if (!segment) return
@@ -64,6 +71,9 @@ export default function SegmentDetailPage() {
       </div>
     )
   }
+
+  const userLat: number | null = state?.userLat ?? null
+  const userLng: number | null = state?.userLng ?? null
 
   const needTime = Math.max(0, segment.targetTime - 1)
   const decodedPath = segment.polyline ? polylineDecoder.decode(segment.polyline) as [number, number][] : null
@@ -118,12 +128,9 @@ export default function SegmentDetailPage() {
         )}
 
         {decodedPath && mapBounds ? (
-          <div className="rounded-xl overflow-hidden" style={{ height: '240px' }}>
-            <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              />
+          <div className="rounded-xl overflow-hidden relative" style={{ height: '240px' }}>
+            <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
+              <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" />
               <Polyline positions={decodedPath} color="#f97316" weight={4} />
               {segment.startLatlng && (
                 <CircleMarker center={segment.startLatlng} radius={6} pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1 }} />
@@ -131,7 +138,29 @@ export default function SegmentDetailPage() {
               {segment.endLatlng && (
                 <CircleMarker center={segment.endLatlng} radius={6} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1 }} />
               )}
+              {userLat != null && userLng != null && (
+                <CircleMarker center={[userLat, userLng]} radius={8} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2 }} />
+              )}
+<MapController onReady={(m) => { mapRef.current = m }} />
             </MapContainer>
+            <div className="absolute bottom-2 right-2 z-[1000] flex flex-col gap-1">
+              <button
+                onClick={() => mapRef.current?.fitBounds(mapBounds, { padding: [20, 20] })}
+                className="p-2 rounded-lg bg-gray-900/90 text-white hover:bg-gray-800 transition-colors shadow"
+                aria-label="Recentre on segment"
+              >
+                <Crosshair size={16} />
+              </button>
+              {userLat != null && userLng != null && (
+                <button
+                  onClick={() => mapRef.current?.setView([userLat, userLng], 15)}
+                  className="p-2 rounded-lg bg-gray-900/90 text-blue-400 hover:bg-gray-800 transition-colors shadow"
+                  aria-label="Recentre on my location"
+                >
+                  <LocateFixed size={16} />
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="rounded-xl bg-gray-800 flex items-center justify-center text-gray-500 text-xs" style={{ height: '120px' }}>

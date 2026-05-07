@@ -39,7 +39,7 @@ export default function SegmentCard({ segment, unit, userLat, userLng }: Props) 
   return (
     <Link
       to={`/segment/${segment.id}`}
-      state={{ segment, unit }}
+      state={{ segment, unit, userLat, userLng }}
       className="block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors"
     >
       {segment.polyline && (

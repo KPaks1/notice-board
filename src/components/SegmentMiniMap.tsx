@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
 import type { LatLngTuple } from 'leaflet'
 
@@ -31,25 +31,51 @@ interface Props {
 
 export default function SegmentMiniMap({ polyline }: Props) {
   const coords = decodePolyline(polyline)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [shouldRender, setShouldRender] = useState(false)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldRender(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '150px' }, // start loading slightly before the card is visible
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   if (coords.length === 0) return null
   const center = coords[Math.floor(coords.length / 2)]
 
   return (
-    <MapContainer
-      center={center}
-      zoom={14}
-      style={{ height: '110px', width: '100%', pointerEvents: 'none' }}
-      zoomControl={false}
-      dragging={false}
-      scrollWheelZoom={false}
-      doubleClickZoom={false}
-      touchZoom={false}
-      keyboard={false}
-      attributionControl={false}
-    >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <Polyline positions={coords} pathOptions={{ color: '#f97316', weight: 3, opacity: 0.9 }} />
-      <FitBounds coords={coords} />
-    </MapContainer>
+    <div ref={containerRef} style={{ height: '110px' }}>
+      {shouldRender && (
+        <MapContainer
+          center={center}
+          zoom={14}
+          style={{ height: '110px', width: '100%', pointerEvents: 'none' }}
+          zoomControl={false}
+          dragging={false}
+          scrollWheelZoom={false}
+          doubleClickZoom={false}
+          touchZoom={false}
+          keyboard={false}
+          attributionControl={false}
+        >
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+            keepBuffer={0}
+          />
+          <Polyline positions={coords} pathOptions={{ color: '#f97316', weight: 3, opacity: 0.9 }} />
+          <FitBounds coords={coords} />
+        </MapContainer>
+      )}
+    </div>
   )
 }
