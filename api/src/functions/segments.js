@@ -1,5 +1,5 @@
 import { app } from '@azure/functions'
-import { getValidToken } from '../tableClient.js'
+import { getValidToken, getSegmentCache, setSegmentCache } from '../tableClient.js'
 import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
 
@@ -120,10 +120,16 @@ app.http('segments', {
       top10.map(async (seg) => {
         try {
           const segKey = `seg:${seg.id}:${athleteId}`
-          let segDetail = cacheGet(segKey)
+          let segDetail = cacheGet(segKey)                         // L1: in-memory
           if (!segDetail) {
-            segDetail = await stravaGet(`/segments/${seg.id}`, accessToken)
-            cacheSet(segKey, segDetail, TTL_LEADERBOARD)
+            segDetail = await getSegmentCache(seg.id, athleteId)   // L2: Azure Table
+            if (segDetail) {
+              cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // warm L1 from L2
+            } else {
+              segDetail = await stravaGet(`/segments/${seg.id}`, accessToken)
+              cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // write L1
+              setSegmentCache(seg.id, athleteId, segDetail)         // write L2 (background)
+            }
           }
 
           const athletePR = segDetail.athlete_segment_stats?.pr_elapsed_time ?? null

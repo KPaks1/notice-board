@@ -30,6 +30,7 @@ export async function getToken(userId) {
       athleteType: entity.athleteType != null ? Number(entity.athleteType) : null,
       bestEfforts: entity.bestEfforts ? JSON.parse(entity.bestEfforts) : null,
       bestEffortsUpdatedAt: entity.bestEffortsUpdatedAt || null,
+      streamCache: entity.streamCache ? JSON.parse(entity.streamCache) : null,
     }
   } catch (err) {
     if (err.statusCode === 404) return null
@@ -40,7 +41,7 @@ export async function getToken(userId) {
 export async function saveToken(userId, {
   accessToken, refreshToken, expiresAt, athleteId,
   athleteName, athleteSex, athleteType,
-  bestEfforts, bestEffortsUpdatedAt,
+  bestEfforts, bestEffortsUpdatedAt, streamCache,
 }) {
   const client = await getClientReady()
   await client.upsertEntity(
@@ -56,6 +57,7 @@ export async function saveToken(userId, {
       athleteType: athleteType != null ? String(athleteType) : '',
       bestEfforts: bestEfforts != null ? JSON.stringify(bestEfforts) : '',
       bestEffortsUpdatedAt: bestEffortsUpdatedAt ?? '',
+      streamCache: streamCache != null ? JSON.stringify(streamCache) : '',
     },
     'Replace',
   )
@@ -98,6 +100,7 @@ export async function getValidToken(userId) {
     athleteType: token.athleteType,
     bestEfforts: token.bestEfforts,
     bestEffortsUpdatedAt: token.bestEffortsUpdatedAt,
+    streamCache: token.streamCache,
   })
 
   return {
@@ -106,4 +109,32 @@ export async function getValidToken(userId) {
     athleteType: token.athleteType,
     bestEfforts: token.bestEfforts,
   }
+}
+
+const SEGMENT_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+export async function getSegmentCache(segId, athleteId) {
+  const client = getClient()
+  try {
+    const entity = await client.getEntity('segCache', `${segId}:${athleteId}`)
+    if (!entity.cachedAt) return null
+    if (Date.now() - new Date(entity.cachedAt).getTime() > SEGMENT_CACHE_TTL_MS) return null
+    return entity.data ? JSON.parse(entity.data) : null
+  } catch (err) {
+    if (err.statusCode === 404) return null
+    throw err
+  }
+}
+
+export async function setSegmentCache(segId, athleteId, data) {
+  const client = await getClientReady()
+  await client.upsertEntity(
+    {
+      partitionKey: 'segCache',
+      rowKey: `${segId}:${athleteId}`,
+      data: JSON.stringify(data),
+      cachedAt: new Date().toISOString(),
+    },
+    'Replace',
+  )
 }
