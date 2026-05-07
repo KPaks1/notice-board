@@ -9,12 +9,12 @@ app.http('stravaStatus', {
   handler: async (request) => {
     const athleteId = readSession(request)
     if (!athleteId) {
-      return { jsonBody: { connected: false } }
+      return { jsonBody: { connected: false, debug: 'session_invalid' } }
     }
 
     const token = await getToken(athleteId)
     if (!token) {
-      return { jsonBody: { connected: false } }
+      return { jsonBody: { connected: false, debug: 'no_token', athleteId } }
     }
 
     return {
