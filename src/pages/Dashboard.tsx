@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { List, Map, RefreshCw } from 'lucide-react'
+import { ArrowUp, List, Map, RefreshCw } from 'lucide-react'
 import { useLocation } from '../hooks/useLocation'
 import { fetchSegments } from '../api'
 import { formatRadius } from '../format'
@@ -54,6 +54,16 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { coords, error: locError } = useLocation()
+  const mainRef = useRef<HTMLElement>(null)
+  const [showScrollTop, setShowScrollTop] = useState(false)
+
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    const onScroll = () => setShowScrollTop(el.scrollTop > 150)
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
 
   // Only re-fetch when activityType or targetType change, not radius or distance filter
   const fetchKey = `${settings.activityType}:${settings.targetType}`
@@ -148,7 +158,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         )}
       </header>
 
-      <main className={`flex-1 min-h-0 ${isMapMode ? 'overflow-hidden' : 'px-4 pb-28 overflow-y-auto no-scrollbar'}`}>
+      <main ref={mainRef} className={`flex-1 min-h-0 ${isMapMode ? 'overflow-hidden' : 'px-4 pb-28 overflow-y-auto no-scrollbar'}`}>
         {tab === 'evictions' ? (
           viewMode === 'list' ? (
             <>
@@ -199,7 +209,15 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 flex">
+      <button
+        onClick={() => mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+        className={`fixed bottom-20 right-4 z-[1002] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        aria-label="Back to top"
+      >
+        <ArrowUp size={18} />
+      </button>
+
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 flex z-[1001]">
         <TabButton active={tab === 'evictions'} onClick={() => setTab('evictions')} icon="🎯" label="Evictions" />
         <TabButton active={tab === 'settings'} onClick={() => setTab('settings')} icon="⚙️" label="Settings" />
         <TabButton active={tab === 'profile'} onClick={() => setTab('profile')} icon="👤" label="Profile" />
