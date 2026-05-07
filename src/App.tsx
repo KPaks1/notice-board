@@ -1,25 +1,21 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { fetchStravaStatus, refreshAthleteEfforts, storeToken } from './api'
 import type { StravaStatus } from './types'
 import ConnectStrava from './pages/ConnectStrava'
 import Dashboard from './pages/Dashboard'
 import SegmentDetailPage from './pages/SegmentDetailPage'
 
-function TokenHandler() {
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
-    if (token) {
-      storeToken(token)
-      navigate('/', { replace: true })
-    }
-  }, [navigate])
-
-  return null
-}
+// Handle token from OAuth redirect synchronously before React renders,
+// so fetchStravaStatus() always finds the token already in sessionStorage.
+;(() => {
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('token')
+  if (token) {
+    storeToken(token)
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+})()
 
 function StravaGuard({ children }: { children: (status: StravaStatus) => React.ReactNode }) {
   const [status, setStatus] = useState<StravaStatus | null>(null)
@@ -89,7 +85,6 @@ function OnboardingGate({ status }: { status: StravaStatus }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <TokenHandler />
       <Routes>
         <Route path="/connect-strava" element={<ConnectStrava />} />
         <Route path="/" element={<StravaGuard>{(status) => <OnboardingGate status={status} />}</StravaGuard>} />

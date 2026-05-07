@@ -5,6 +5,7 @@ import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
 import { StravaError, stravaHttpStatus } from '../stravaError.js'
 import { stravaGet } from '../stravaClient.js'
+import { translateToEnglish } from '../translator.js'
 
 const TTL_EXPLORE = 60 * 60       // segment list: 1 hour
 const TTL_LEADERBOARD = 15 * 60   // leaderboard times: 15 min
@@ -123,6 +124,7 @@ app.http('segments', {
               cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // warm L1 from L2
             } else {
               segDetail = await stravaGet(`/segments/${seg.id}`, accessToken)
+              segDetail.translatedName = await translateToEnglish(segDetail.name)
               cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // write L1
               setSegmentCache(seg.id, athleteId, segDetail)         // write L2 (background)
             }
@@ -162,6 +164,7 @@ app.http('segments', {
           return {
             id: seg.id,
             name: seg.name,
+            translatedName: segDetail.translatedName ?? null,
             distance: segDistance,
             elevationGain: Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0)),
             activityType: seg.activity_type,

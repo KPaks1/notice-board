@@ -131,7 +131,12 @@ export default function SegmentDetailPage() {
         >
           <ChevronLeft size={22} />
         </button>
-        <h1 className="text-base font-semibold text-white leading-snug flex-1 line-clamp-2">{segment.name}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-semibold text-white leading-snug line-clamp-2">{segment.name}</h1>
+          {segment.translatedName && (
+            <p className="text-xs text-gray-500 italic line-clamp-1">{segment.translatedName}</p>
+          )}
+        </div>
         <button
           onClick={toggleStar}
           disabled={starring || starCooldown}
