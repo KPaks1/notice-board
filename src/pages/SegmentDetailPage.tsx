@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Crosshair, ExternalLink, LocateFixed, Star } from 'lucide-react'
+import { ChevronLeft, Crosshair, ExternalLink, LocateFixed, Navigation, Star } from 'lucide-react'
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
@@ -38,16 +38,32 @@ export default function SegmentDetailPage() {
   const segment: ScoredSegment | null = state?.segment ?? (state as ScoredSegment | null)
   const unit: Unit = state?.unit ?? 'km'
   const [starred, setStarred] = useState(segment?.starred ?? false)
+  const [starring, setStarring] = useState(false)
+  const [starCooldown, setStarCooldown] = useState(false)
   const [starError, setStarError] = useState<string | null>(null)
+  const [starSuccess, setStarSuccess] = useState<string | null>(null)
   const mapRef = useRef<L.Map | null>(null)
+  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (cooldownTimer.current) clearTimeout(cooldownTimer.current)
+    if (successTimer.current) clearTimeout(successTimer.current)
+  }, [])
 
   async function toggleStar() {
-    if (!segment) return
+    if (!segment || starring || starCooldown) return
     const next = !starred
     setStarred(next)
     setStarError(null)
+    setStarSuccess(null)
+    setStarring(true)
     try {
       await starSegment(segment.id, next)
+      const msg = next ? 'Starred on Strava' : 'Unstarred on Strava'
+      setStarSuccess(msg)
+      if (successTimer.current) clearTimeout(successTimer.current)
+      successTimer.current = setTimeout(() => setStarSuccess(null), 1800)
     } catch (e) {
       setStarred(!next)
       const msg = e instanceof Error ? e.message : ''
@@ -56,6 +72,11 @@ export default function SegmentDetailPage() {
           ? 'Disconnect and reconnect Strava to enable starring segments.'
           : 'Failed to update star.',
       )
+    } finally {
+      setStarring(false)
+      setStarCooldown(true)
+      if (cooldownTimer.current) clearTimeout(cooldownTimer.current)
+      cooldownTimer.current = setTimeout(() => setStarCooldown(false), 3000)
     }
   }
 
@@ -92,7 +113,8 @@ export default function SegmentDetailPage() {
         <h1 className="text-base font-semibold text-white leading-snug flex-1 line-clamp-2">{segment.name}</h1>
         <button
           onClick={toggleStar}
-          className="p-1 rounded-lg text-gray-400 hover:text-white transition-colors"
+          disabled={starring || starCooldown}
+          className="p-1 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-40"
           aria-label={starred ? 'Unstar segment' : 'Star segment'}
         >
           <Star size={20} className={starred ? 'text-yellow-400 fill-yellow-400' : ''} />
@@ -171,15 +193,53 @@ export default function SegmentDetailPage() {
           </div>
         )}
 
-        <a
-          href={`https://www.strava.com/segments/${segment.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors"
-        >
-          View on Strava <ExternalLink size={15} />
-        </a>
+        <div className="flex gap-2">
+          {segment.startLatlng && (() => {
+            const [lat, lng] = segment.startLatlng
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            const mapsUrl = isIOS
+              ? `maps://maps.apple.com/?daddr=${lat},${lng}`
+              : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+            return (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-gray-800 text-white text-sm font-semibold hover:bg-gray-700 transition-colors"
+              >
+                Directions <Navigation size={15} />
+              </a>
+            )
+          })()}
+          <a
+            href={`https://www.strava.com/segments/${segment.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors"
+          >
+            Strava <ExternalLink size={15} />
+          </a>
+        </div>
       </div>
+
+      {starSuccess && (
+        <>
+          <style>{`
+            @keyframes toast-pop {
+              0%   { opacity: 0; transform: translateX(-50%) scale(0.92); }
+              12%  { opacity: 1; transform: translateX(-50%) scale(1); }
+              75%  { opacity: 1; transform: translateX(-50%) scale(1); }
+              100% { opacity: 0; transform: translateX(-50%) scale(0.92); }
+            }
+          `}</style>
+          <div
+            style={{ animation: 'toast-pop 1.8s ease-in-out forwards' }}
+            className="fixed bottom-24 left-1/2 z-[2000] bg-gray-900 border border-gray-700 rounded-xl px-5 py-3 shadow-xl pointer-events-none"
+          >
+            <p className="text-white text-sm font-medium whitespace-nowrap">{starSuccess}</p>
+          </div>
+        </>
+      )}
     </div>
   )
 }
