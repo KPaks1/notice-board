@@ -172,6 +172,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                 onRefresh={refresh}
                 mode={settings.mode}
                 unit={settings.unit}
+                userLat={coords?.lat ?? 0}
+                userLng={coords?.lng ?? 0}
               />
             </>
           ) : (
