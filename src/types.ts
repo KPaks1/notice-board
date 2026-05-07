@@ -21,6 +21,7 @@ export interface ScoredSegment {
   score: number
   targetTime: number
   userPR: number | null
+  estimatedTime: number | null
   targetLabel: string
   city: string | null
   state: string | null

@@ -1,5 +1,6 @@
 import { app } from '@azure/functions'
 import { getValidToken, getSegmentCache, setSegmentCache } from '../tableClient.js'
+import { estimateTimeForDistance } from './computeEfforts.js'
 import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
 
@@ -41,9 +42,8 @@ function bestEffortPaceForDistance(efforts, distanceM) {
   ).secsPerMeter
 }
 
-function targetLabel(targetType, athleteSex) {
-  if (targetType === 'personal_best') return 'Your Best'
-  return athleteSex === 'F' ? 'QOM' : 'KOM'
+function targetLabel(targetType) {
+  return targetType === 'personal_best' ? 'Your Best' : 'CR'
 }
 
 app.http('segments', {
@@ -161,6 +161,8 @@ app.http('segments', {
           const midpointLat = ((seg.start_latlng?.[0] ?? lat) + (seg.end_latlng?.[0] ?? lat)) / 2
           const midpointLng = ((seg.start_latlng?.[1] ?? lng) + (seg.end_latlng?.[1] ?? lng)) / 2
 
+          const estimatedTime = estimateTimeForDistance(effortList, segDistance)
+
           return {
             id: seg.id,
             name: seg.name,
@@ -170,7 +172,8 @@ app.http('segments', {
             score,
             targetTime,
             userPR,
-            targetLabel: targetLabel(targetType, athleteSex),
+            estimatedTime,
+            targetLabel: targetLabel(targetType),
             city: seg.city ?? null,
             state: seg.state ?? null,
             midpointLat,

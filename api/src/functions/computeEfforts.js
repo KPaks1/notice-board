@@ -204,6 +204,19 @@ function computeEfforts(activities, rollingBests = {}) {
   return enforceMonotonicity(result)
 }
 
+// Given a stored effort list, estimate the athlete's time for an arbitrary distance.
+// Uses Riegel (k=1.06) for aerobic distances, sprint decay (k=1.15) for sub-1600m.
+export function estimateTimeForDistance(effortList, distanceM) {
+  if (!effortList || effortList.length === 0) return null
+  const valid = effortList.filter((e) => e.secsPerMeter != null && e.estimatedSecs != null)
+  if (valid.length === 0) return null
+  const anchor = valid.reduce((a, b) =>
+    Math.abs(a.distanceM - distanceM) < Math.abs(b.distanceM - distanceM) ? a : b,
+  )
+  const k = distanceM >= 1600 ? 1.06 : 1.15
+  return Math.round(anchor.estimatedSecs * Math.pow(distanceM / anchor.distanceM, k))
+}
+
 export async function computeAndSaveBestEfforts(athleteId, accessToken) {
   const res = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=200', {
     headers: { Authorization: `Bearer ${accessToken}` },

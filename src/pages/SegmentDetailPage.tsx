@@ -22,11 +22,12 @@ function Badge({ score }: { score: number }) {
   return <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-700 text-gray-400">TOUGH</span>
 }
 
-function StatBox({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function StatBox({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
   return (
     <div className="bg-gray-800 rounded-lg p-3 text-center">
       <div className="text-xs text-gray-400 mb-1">{label}</div>
       <div className={`font-mono font-medium text-sm ${highlight ? 'text-green-400' : 'text-white'}`}>{value}</div>
+      {sub && <div className={`font-mono text-xs mt-0.5 ${highlight ? 'text-green-400/70' : 'text-gray-500'}`}>{sub}</div>}
     </div>
   )
 }
@@ -75,7 +76,6 @@ export default function SegmentDetailPage() {
   const userLat: number | null = state?.userLat ?? null
   const userLng: number | null = state?.userLng ?? null
 
-  const needTime = Math.max(0, segment.targetTime - 1)
   const decodedPath = segment.polyline ? polylineDecoder.decode(segment.polyline) as [number, number][] : null
   const mapBounds = decodedPath ? L.latLngBounds(decodedPath) : null
 
@@ -107,11 +107,14 @@ export default function SegmentDetailPage() {
           {segment.city && ` · ${segment.city}`}
         </p>
 
-        <div className="grid grid-cols-2 gap-2">
-          <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} />
-          <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} />
-          <StatBox label="Need" value={formatTime(needTime)} highlight={segment.score > 0} />
-          <StatBox label="Pace needed" value={formatPace(needTime, segment.distance, unit)} highlight={segment.score > 0} />
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} sub={formatPace(segment.targetTime, segment.distance, unit)} />
+            <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} sub={segment.userPR ? formatPace(segment.userPR, segment.distance, unit) : undefined} />
+          </div>
+          {segment.estimatedTime != null && (
+            <StatBox label="Est. best" value={formatTime(segment.estimatedTime)} sub={formatPace(segment.estimatedTime, segment.distance, unit)} />
+          )}
         </div>
         {starError && (
           <div className="flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-3 py-2">
