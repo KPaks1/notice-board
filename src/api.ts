@@ -10,7 +10,7 @@ export function clearToken() {
   sessionStorage.removeItem(TOKEN_KEY)
 }
 
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const token = sessionStorage.getItem(TOKEN_KEY)
   return token ? { Authorization: `Bearer ${token}` } : {}
 }

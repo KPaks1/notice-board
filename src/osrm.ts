@@ -1,8 +1,4 @@
-const BASE = 'https://router.project-osrm.org'
-
-function activityProfile(activityType?: string | null): 'foot' | 'bike' {
-  return activityType?.toLowerCase().includes('ride') ? 'bike' : 'foot'
-}
+import { authHeaders } from './api'
 
 export async function fetchRoadDistance(
   userLat: number,
@@ -12,13 +8,16 @@ export async function fetchRoadDistance(
   activityType?: string | null,
   signal?: AbortSignal,
 ): Promise<number | null> {
-  const p = activityProfile(activityType)
-  const url = `${BASE}/route/v1/${p}/${userLng},${userLat};${destLng},${destLat}?overview=false`
   try {
-    const r = await fetch(url, { signal })
-    if (!r.ok) return null
-    const data = await r.json()
-    const dist = data?.routes?.[0]?.distance
+    const res = await fetch('/api/road-distance', {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userLat, userLng, destinations: [{ id: 0, lat: destLat, lng: destLng }], activityType }),
+      signal,
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const dist = data?.[0]
     return typeof dist === 'number' ? dist : null
   } catch {
     return null
@@ -30,23 +29,24 @@ export async function fetchRoadDistances(
   userLng: number,
   segments: { id: number; startLatlng: [number, number] | null }[],
   signal?: AbortSignal,
+  activityType?: string | null,
 ): Promise<Record<number, number>> {
   const segs = segments.filter((s) => s.startLatlng != null)
   if (segs.length === 0) return {}
-  const coordStr = [
-    `${userLng},${userLat}`,
-    ...segs.map((s) => `${s.startLatlng![1]},${s.startLatlng![0]}`),
-  ].join(';')
-  const destinations = segs.map((_, i) => i + 1).join(';')
-  const url = `${BASE}/table/v1/foot/${coordStr}?sources=0&destinations=${destinations}&annotations=distance`
+  const destinations = segs.map((s) => ({ id: s.id, lat: s.startLatlng![0], lng: s.startLatlng![1] }))
   try {
-    const r = await fetch(url, { signal })
-    if (!r.ok) return {}
-    const data = await r.json()
-    const distances: number[] = data?.distances?.[0]
-    if (!Array.isArray(distances)) return {}
+    const res = await fetch('/api/road-distance', {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userLat, userLng, destinations, activityType }),
+      signal,
+    })
+    if (!res.ok) return {}
+    const data: Record<string, number> = await res.json()
     const map: Record<number, number> = {}
-    segs.forEach((seg, i) => { if (typeof distances[i] === 'number') map[seg.id] = distances[i] })
+    for (const [key, val] of Object.entries(data)) {
+      if (typeof val === 'number') map[Number(key)] = val
+    }
     return map
   } catch {
     return {}

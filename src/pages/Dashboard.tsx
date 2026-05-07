@@ -62,7 +62,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     setRoadDistances({})
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 8000)
-    fetchRoadDistances(coords.lat, coords.lng, allSegments, controller.signal)
+    fetchRoadDistances(coords.lat, coords.lng, allSegments, controller.signal, settings.activityType)
       .then(setRoadDistances)
       .finally(() => clearTimeout(timeout))
     return () => { controller.abort(); clearTimeout(timeout) }
