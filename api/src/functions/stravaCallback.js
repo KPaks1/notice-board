@@ -32,14 +32,23 @@ app.http('stravaCallback', {
     const tokenData = await tokenRes.json()
     const athleteId = String(tokenData.athlete?.id)
 
+    // Fetch the full athlete profile to get the current primary sport preference
+    const athleteRes = await fetch('https://www.strava.com/api/v3/athlete', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    })
+    const athleteProfile = athleteRes.ok ? await athleteRes.json() : tokenData.athlete
+
+    const athleteType = athleteProfile?.athlete_type ?? null
+    const primaryActivity = athleteType === 0 ? 'cycling' : athleteType === 1 ? 'running' : null
+
     await saveToken(athleteId, {
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token,
       expiresAt: tokenData.expires_at,
       athleteId,
-      athleteName: `${tokenData.athlete?.firstname ?? ''} ${tokenData.athlete?.lastname ?? ''}`.trim(),
-      athleteSex: tokenData.athlete?.sex ?? null,
-      athleteType: tokenData.athlete?.athlete_type ?? null,
+      athleteName: `${athleteProfile?.firstname ?? ''} ${athleteProfile?.lastname ?? ''}`.trim(),
+      athleteSex: athleteProfile?.sex ?? null,
+      primaryActivity,
     })
 
     const sessionToken = createToken(athleteId)

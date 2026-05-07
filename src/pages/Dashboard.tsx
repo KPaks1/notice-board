@@ -15,7 +15,7 @@ const SETTINGS_KEY = 'eviction-notice-settings'
 function getDefaultSettings(status: StravaStatus): Settings {
   return {
     radiusKm: 5,
-    activityType: status.athleteType === 0 ? 'cycling' : 'running',
+    activityType: status.primaryActivity ?? 'running',
     targetType: 'kom',
     minSegmentKm: 0,
     maxSegmentKm: 10,

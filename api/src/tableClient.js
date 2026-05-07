@@ -27,10 +27,10 @@ export async function getToken(userId) {
       athleteId: entity.athleteId,
       athleteName: entity.athleteName ?? null,
       athleteSex: entity.athleteSex ?? null,
-      athleteType: entity.athleteType != null ? Number(entity.athleteType) : null,
       bestEfforts: entity.bestEfforts ? JSON.parse(entity.bestEfforts) : null,
       bestEffortsUpdatedAt: entity.bestEffortsUpdatedAt || null,
       streamCache: entity.streamCache ? JSON.parse(entity.streamCache) : null,
+      primaryActivity: entity.primaryActivity || null,
     }
   } catch (err) {
     if (err.statusCode === 404) return null
@@ -40,8 +40,8 @@ export async function getToken(userId) {
 
 export async function saveToken(userId, {
   accessToken, refreshToken, expiresAt, athleteId,
-  athleteName, athleteSex, athleteType,
-  bestEfforts, bestEffortsUpdatedAt, streamCache,
+  athleteName, athleteSex,
+  bestEfforts, bestEffortsUpdatedAt, streamCache, primaryActivity,
 }) {
   const client = await getClientReady()
   await client.upsertEntity(
@@ -54,10 +54,10 @@ export async function saveToken(userId, {
       athleteId: String(athleteId),
       athleteName: athleteName ?? '',
       athleteSex: athleteSex ?? '',
-      athleteType: athleteType != null ? String(athleteType) : '',
       bestEfforts: bestEfforts != null ? JSON.stringify(bestEfforts) : '',
       bestEffortsUpdatedAt: bestEffortsUpdatedAt ?? '',
       streamCache: streamCache != null ? JSON.stringify(streamCache) : '',
+      primaryActivity: primaryActivity ?? '',
     },
     'Replace',
   )
@@ -71,8 +71,8 @@ export async function getValidToken(userId) {
     return {
       accessToken: token.accessToken,
       athleteSex: token.athleteSex,
-      athleteType: token.athleteType,
       bestEfforts: token.bestEfforts,
+      primaryActivity: token.primaryActivity,
     }
   }
 
@@ -97,17 +97,17 @@ export async function getValidToken(userId) {
     athleteId: token.athleteId,
     athleteName: token.athleteName,
     athleteSex: token.athleteSex,
-    athleteType: token.athleteType,
     bestEfforts: token.bestEfforts,
     bestEffortsUpdatedAt: token.bestEffortsUpdatedAt,
     streamCache: token.streamCache,
+    primaryActivity: token.primaryActivity,
   })
 
   return {
     accessToken: data.access_token,
     athleteSex: token.athleteSex,
-    athleteType: token.athleteType,
     bestEfforts: token.bestEfforts,
+    primaryActivity: token.primaryActivity,
   }
 }
 

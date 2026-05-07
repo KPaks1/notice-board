@@ -23,7 +23,7 @@ app.http('stravaStatus', {
         athleteId,
         athleteName: token.athleteName ?? null,
         athleteSex: token.athleteSex ?? null,
-        athleteType: token.athleteType ?? null,
+        primaryActivity: token.primaryActivity ?? null,
         bestEffortsComputed: !!token.bestEfforts,
       },
     }

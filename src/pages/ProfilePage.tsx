@@ -68,11 +68,6 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
     navigate('/connect-strava', { replace: true })
   }
 
-  const activityLabel =
-    stravaStatus.athleteType === 0 ? 'Cyclist' :
-    stravaStatus.athleteType === 1 ? 'Runner' :
-    'Unknown'
-
   const sexLabel =
     stravaStatus.athleteSex === 'M' ? 'Male' :
     stravaStatus.athleteSex === 'F' ? 'Female' :
@@ -90,7 +85,6 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
       </div>
 
       <div className="flex gap-2 justify-center">
-        <span className="px-3 py-1 rounded-full bg-gray-800 text-sm text-gray-300">{activityLabel}</span>
         <span className="px-3 py-1 rounded-full bg-gray-800 text-sm text-gray-300">{sexLabel}</span>
       </div>
 
@@ -117,7 +111,7 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
         )}
 
         {!effortsLoading && efforts?.computed && (() => {
-          const list = stravaStatus.athleteType === 0 ? efforts.ride : efforts.run
+          const list = stravaStatus.primaryActivity === 'cycling' ? efforts.ride : efforts.run
           return (
             <>
               <div className="grid grid-cols-3 gap-2">
