@@ -76,9 +76,17 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
   return (
     <div className="py-6 space-y-6">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center text-2xl font-bold text-white">
-          {initials(stravaStatus.athleteName)}
-        </div>
+        {stravaStatus.athletePhoto ? (
+          <img
+            src={stravaStatus.athletePhoto}
+            alt={stravaStatus.athleteName ?? 'Athlete'}
+            className="w-16 h-16 rounded-full object-cover"
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center text-2xl font-bold text-white">
+            {initials(stravaStatus.athleteName)}
+          </div>
+        )}
         <h2 className="text-lg font-semibold text-white">
           {stravaStatus.athleteName ?? 'Athlete'}
         </h2>

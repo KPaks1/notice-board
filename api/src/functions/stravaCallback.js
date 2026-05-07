@@ -48,6 +48,7 @@ app.http('stravaCallback', {
       athleteId,
       athleteName: `${athleteProfile?.firstname ?? ''} ${athleteProfile?.lastname ?? ''}`.trim(),
       athleteSex: athleteProfile?.sex ?? null,
+      athletePhoto: athleteProfile?.profile_medium ?? null,
       primaryActivity,
     })
 

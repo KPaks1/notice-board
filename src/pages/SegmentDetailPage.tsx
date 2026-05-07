@@ -5,6 +5,9 @@ import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-l
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
 import { clearToken, starSegment } from '../api'
+import { fetchRoadDistance } from '../osrm'
+import { haversineKm } from '../geo'
+import DistanceToStart from '../components/DistanceToStart'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 import type { ScoredSegment } from '../types'
 
@@ -80,6 +83,21 @@ export default function SegmentDetailPage() {
     }
   }
 
+  const userLat: number | null = state?.userLat ?? null
+  const userLng: number | null = state?.userLng ?? null
+  const [roadDistance, setRoadDistance] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!segment?.startLatlng || userLat == null || userLng == null) return
+    const [startLat, startLng] = segment.startLatlng
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    fetchRoadDistance(userLat, userLng, startLat, startLng, segment.activityType, controller.signal)
+      .then((dist) => { if (dist != null) setRoadDistance(dist) })
+      .finally(() => clearTimeout(timeout))
+    return () => { controller.abort(); clearTimeout(timeout) }
+  }, [segment?.id, userLat, userLng])
+
   if (!segment) {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-4">
@@ -94,11 +112,14 @@ export default function SegmentDetailPage() {
     )
   }
 
-  const userLat: number | null = state?.userLat ?? null
-  const userLng: number | null = state?.userLng ?? null
-
   const decodedPath = segment.polyline ? polylineDecoder.decode(segment.polyline) as [number, number][] : null
   const mapBounds = decodedPath ? L.latLngBounds(decodedPath) : null
+
+  const haversineM = segment.startLatlng && userLat != null && userLng != null
+    ? haversineKm(userLat, userLng, segment.startLatlng[0], segment.startLatlng[1]) * 1000
+    : null
+  const displayDistanceM = roadDistance ?? haversineM
+  const isByPlane = roadDistance == null && displayDistanceM != null
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto">
@@ -123,11 +144,12 @@ export default function SegmentDetailPage() {
       </header>
 
       <div className="px-4 pb-4 flex-1 overflow-y-auto space-y-5">
-        <p className="text-xs text-gray-500">
+        <div className="text-xs text-gray-500">
           {formatDistance(segment.distance, unit)}
           {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
           {segment.city && ` · ${segment.city}`}
-        </p>
+          {displayDistanceM != null && <> · <DistanceToStart distanceM={displayDistanceM} isByPlane={isByPlane} unit={unit} /></>}
+        </div>
 
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">

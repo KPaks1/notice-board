@@ -2,17 +2,9 @@ import { Link } from 'react-router-dom'
 import { Star } from 'lucide-react'
 import type { ScoredSegment } from '../types'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
+import { haversineKm } from '../geo'
+import DistanceToStart from './DistanceToStart'
 import SegmentMiniMap from './SegmentMiniMap'
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLng = ((lng2 - lng1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 function Badge({ score }: { score: number }) {
   if (score > 0)
@@ -27,14 +19,17 @@ interface Props {
   unit: Unit
   userLat: number
   userLng: number
+  roadDistance?: number
 }
 
-export default function SegmentCard({ segment, unit, userLat, userLng }: Props) {
+export default function SegmentCard({ segment, unit, userLat, userLng, roadDistance }: Props) {
   const needTime = Math.max(0, segment.targetTime - 1)
 
-  const distanceToStart = segment.startLatlng
-    ? haversineKm(userLat, userLng, segment.startLatlng[0], segment.startLatlng[1])
+  const haversineM = segment.startLatlng
+    ? haversineKm(userLat, userLng, segment.startLatlng[0], segment.startLatlng[1]) * 1000
     : null
+  const distanceM = roadDistance ?? haversineM
+  const isByPlane = roadDistance == null && distanceM != null
 
   return (
     <Link
@@ -57,12 +52,12 @@ export default function SegmentCard({ segment, unit, userLat, userLng }: Props) 
           </div>
         </div>
 
-        <p className="text-xs text-gray-500 mb-3">
+        <div className="text-xs text-gray-500 mb-3">
           {formatDistance(segment.distance, unit)}
           {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
-          {distanceToStart != null && ` · ${formatDistance(distanceToStart * 1000, unit)} away`}
+          {distanceM != null && <> · <DistanceToStart distanceM={distanceM} isByPlane={isByPlane} unit={unit} /></>}
           {segment.city && ` · ${segment.city}`}
-        </p>
+        </div>
 
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="bg-gray-800 rounded-lg p-2 text-center">

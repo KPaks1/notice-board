@@ -5,6 +5,8 @@ import { useLocation } from '../hooks/useLocation'
 import { fetchSegments } from '../api'
 import { formatRadius } from '../format'
 import type { ScoredSegment, Settings, StravaStatus } from '../types'
+import { fetchRoadDistances } from '../osrm'
+import { haversineKm } from '../geo'
 import EvictionsList from '../components/EvictionsList'
 import SegmentsMap from '../components/SegmentsMap'
 import SettingsPanel from '../components/SettingsPanel'
@@ -32,15 +34,6 @@ function loadSettings(status: StravaStatus): Settings {
   return getDefaultSettings(status)
 }
 
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLng = ((lng2 - lng1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 type Tab = 'evictions' | 'settings' | 'profile'
 
@@ -56,6 +49,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const { coords, error: locError } = useLocation()
   const mainRef = useRef<HTMLElement>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
+  const [roadDistances, setRoadDistances] = useState<Record<number, number>>({})
 
   useEffect(() => {
     const el = mainRef.current
@@ -64,6 +58,17 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
+
+  useEffect(() => {
+    if (!coords || allSegments.length === 0) return
+    setRoadDistances({})
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+    fetchRoadDistances(coords.lat, coords.lng, allSegments, controller.signal)
+      .then(setRoadDistances)
+      .finally(() => clearTimeout(timeout))
+    return () => { controller.abort(); clearTimeout(timeout) }
+  }, [allSegments, coords])
 
   // Only re-fetch when activityType or targetType change, not radius or distance filter
   const fetchKey = `${settings.activityType}:${settings.targetType}`
@@ -184,6 +189,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                 unit={settings.unit}
                 userLat={coords?.lat ?? 0}
                 userLng={coords?.lng ?? 0}
+                roadDistances={roadDistances}
               />
             </>
           ) : (

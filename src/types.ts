@@ -38,6 +38,7 @@ export interface StravaStatus {
   athleteId?: string
   athleteName?: string | null
   athleteSex?: 'M' | 'F' | null
+  athletePhoto?: string | null
   primaryActivity?: 'running' | 'cycling' | null
   bestEffortsComputed?: boolean
 }

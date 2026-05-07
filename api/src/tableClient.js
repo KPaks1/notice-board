@@ -27,6 +27,7 @@ export async function getToken(userId) {
       athleteId: entity.athleteId,
       athleteName: entity.athleteName ?? null,
       athleteSex: entity.athleteSex ?? null,
+      athletePhoto: entity.athletePhoto ?? null,
       bestEfforts: entity.bestEfforts ? JSON.parse(entity.bestEfforts) : null,
       bestEffortsUpdatedAt: entity.bestEffortsUpdatedAt || null,
       streamCache: entity.streamCache ? JSON.parse(entity.streamCache) : null,
@@ -40,7 +41,7 @@ export async function getToken(userId) {
 
 export async function saveToken(userId, {
   accessToken, refreshToken, expiresAt, athleteId,
-  athleteName, athleteSex,
+  athleteName, athleteSex, athletePhoto,
   bestEfforts, bestEffortsUpdatedAt, streamCache, primaryActivity,
 }) {
   const client = await getClientReady()
@@ -54,6 +55,7 @@ export async function saveToken(userId, {
       athleteId: String(athleteId),
       athleteName: athleteName ?? '',
       athleteSex: athleteSex ?? '',
+      athletePhoto: athletePhoto ?? '',
       bestEfforts: bestEfforts != null ? JSON.stringify(bestEfforts) : '',
       bestEffortsUpdatedAt: bestEffortsUpdatedAt ?? '',
       streamCache: streamCache != null ? JSON.stringify(streamCache) : '',
@@ -97,6 +99,7 @@ export async function getValidToken(userId) {
     athleteId: token.athleteId,
     athleteName: token.athleteName,
     athleteSex: token.athleteSex,
+    athletePhoto: token.athletePhoto,
     bestEfforts: token.bestEfforts,
     bestEffortsUpdatedAt: token.bestEffortsUpdatedAt,
     streamCache: token.streamCache,
