@@ -31,9 +31,10 @@ export function verifyToken(token) {
 }
 
 export function readSession(request) {
+  const token = request.headers.get('x-session-token')
+  if (token) return verifyToken(token)
+  // fallback: accept Bearer for local dev
   const auth = request.headers.get('authorization') ?? ''
-  if (auth.startsWith('Bearer ')) {
-    return verifyToken(auth.slice(7))
-  }
+  if (auth.startsWith('Bearer ')) return verifyToken(auth.slice(7))
   return null
 }

@@ -12,7 +12,7 @@ export function clearToken() {
 
 export function authHeaders(): Record<string, string> {
   const token = sessionStorage.getItem(TOKEN_KEY)
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  return token ? { 'X-Session-Token': token } : {}
 }
 
 export async function fetchStravaStatus(): Promise<StravaStatus> {
