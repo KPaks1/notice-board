@@ -1,6 +1,8 @@
 import { app } from '@azure/functions'
 import { getValidToken } from '../tableClient.js'
 import { readSession } from '../session.js'
+import { StravaError, stravaHttpStatus } from '../stravaError.js'
+import { stravaPut } from '../stravaClient.js'
 
 app.http('segmentStar', {
   methods: ['PUT'],
@@ -31,22 +33,14 @@ app.http('segmentStar', {
 
     const starred = Boolean(body?.starred)
 
-    const res = await fetch(`https://www.strava.com/api/v3/segments/${id}/starred`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${tokenData.accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ starred }),
-    })
-
-    if (res.status === 401 || res.status === 403) {
-      return { status: 403, jsonBody: { error: 'scope_required' } }
-    }
-
-    if (!res.ok) {
-      context.error(`Strava star endpoint returned ${res.status} for segment ${id}`)
-      return { status: 502, jsonBody: { error: 'Failed to update star on Strava' } }
+    try {
+      await stravaPut(`/segments/${id}/starred`, tokenData.accessToken, { starred })
+    } catch (err) {
+      if (err instanceof StravaError && (err.status === 401 || err.status === 403)) {
+        return { status: 403, jsonBody: { error: 'scope_required' } }
+      }
+      context.error(`Strava star endpoint failed for segment ${id}:`, err.message)
+      return { status: err instanceof StravaError ? stravaHttpStatus(err.status) : 502, jsonBody: { error: err.message } }
     }
 
     return { jsonBody: { id: Number(id), starred } }

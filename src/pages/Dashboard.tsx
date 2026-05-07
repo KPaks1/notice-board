@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUp, List, Map, RefreshCw } from 'lucide-react'
 import { useLocation } from '../hooks/useLocation'
-import { fetchSegments } from '../api'
+import { useSegments } from '../hooks/useSegments'
 import { formatRadius } from '../format'
-import type { ScoredSegment, Settings, StravaStatus } from '../types'
+import type { Settings, StravaStatus } from '../types'
 import { fetchRoadDistances } from '../osrm'
 import { haversineKm } from '../geo'
 import EvictionsList from '../components/EvictionsList'
@@ -43,10 +43,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const [tab, setTab] = useState<Tab>('evictions')
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [settings, setSettings] = useState<Settings>(() => loadSettings(stravaStatus))
-  const [allSegments, setAllSegments] = useState<ScoredSegment[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const { coords, error: locError } = useLocation()
+  const { allSegments, loading, error, refresh } = useSegments(coords, settings.activityType, settings.targetType)
   const mainRef = useRef<HTMLElement>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [roadDistances, setRoadDistances] = useState<Record<number, number>>({})
@@ -70,40 +68,9 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     return () => { controller.abort(); clearTimeout(timeout) }
   }, [allSegments, coords])
 
-  // Only re-fetch when activityType or targetType change, not radius or distance filter
-  const fetchKey = `${settings.activityType}:${settings.targetType}`
-  const prevFetchKey = useRef<string | null>(null)
-
-  const refresh = useCallback(async () => {
-    if (!coords) return
-    setLoading(true)
-    setError(null)
-    try {
-      const results = await fetchSegments(
-        coords.lat,
-        coords.lng,
-        settings.activityType,
-        settings.targetType,
-      )
-      setAllSegments(results)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
-  }, [coords, settings.activityType, settings.targetType])
-
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
   }, [settings])
-
-  // Fetch on first load, and when activityType/targetType change
-  useEffect(() => {
-    if (!coords) return
-    if (prevFetchKey.current === fetchKey && allSegments.length > 0) return
-    prevFetchKey.current = fetchKey
-    refresh()
-  }, [coords, fetchKey, refresh, allSegments.length])
 
   // Filter cached segments by radius + distance + mode — no API call
   const segments = useMemo(() => {

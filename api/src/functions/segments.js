@@ -3,6 +3,8 @@ import { getValidToken, getSegmentCache, setSegmentCache } from '../tableClient.
 import { estimateTimeForDistance } from './computeEfforts.js'
 import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
+import { StravaError, stravaHttpStatus } from '../stravaError.js'
+import { stravaGet } from '../stravaClient.js'
 
 const TTL_EXPLORE = 60 * 60       // segment list: 1 hour
 const TTL_LEADERBOARD = 15 * 60   // leaderboard times: 15 min
@@ -14,13 +16,6 @@ function boundingBox(lat, lng, radiusKm) {
   return [lat - latDelta, lng - lngDelta, lat + latDelta, lng + lngDelta].join(',')
 }
 
-async function stravaGet(path, accessToken) {
-  const res = await fetch(`https://www.strava.com/api/v3${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
-  if (!res.ok) throw new Error(`Strava API ${path} returned ${res.status}`)
-  return res.json()
-}
 
 // xoms times can be formatted strings ("1:02") or integers (seconds)
 function parseXomTime(xom) {
@@ -87,7 +82,8 @@ app.http('segments', {
         cacheSet(exploreKey, exploreResults, TTL_EXPLORE)
       } catch (err) {
         context.error('Segment explore failed:', err.message)
-        return { status: 502, jsonBody: { error: 'Failed to fetch segments from Strava' } }
+        const status = err instanceof StravaError ? stravaHttpStatus(err.status) : 502
+        return { status, jsonBody: { error: err.message } }
       }
     }
 

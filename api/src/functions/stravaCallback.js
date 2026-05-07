@@ -1,6 +1,7 @@
 import { app } from '@azure/functions'
 import { saveToken } from '../tableClient.js'
 import { createToken } from '../session.js'
+import { stravaGet } from '../stravaClient.js'
 
 app.http('stravaCallback', {
   methods: ['GET'],
@@ -33,10 +34,12 @@ app.http('stravaCallback', {
     const athleteId = String(tokenData.athlete?.id)
 
     // Fetch the full athlete profile to get the current primary sport preference
-    const athleteRes = await fetch('https://www.strava.com/api/v3/athlete', {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    })
-    const athleteProfile = athleteRes.ok ? await athleteRes.json() : tokenData.athlete
+    let athleteProfile
+    try {
+      athleteProfile = await stravaGet('/athlete', tokenData.access_token)
+    } catch {
+      athleteProfile = tokenData.athlete
+    }
 
     const athleteType = athleteProfile?.athlete_type ?? null
     const primaryActivity = athleteType === 0 ? 'cycling' : athleteType === 1 ? 'running' : null

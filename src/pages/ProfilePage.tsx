@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { clearToken, fetchAthleteEfforts, refreshAthleteEfforts } from '../api'
+import { clearToken } from '../api'
+import { useAthleteEfforts } from '../hooks/useAthleteEfforts'
 import { formatPace } from '../format'
 import type { Unit } from '../format'
-import type { BestEffortsResponse, EffortEntry, StravaStatus } from '../types'
+import type { EffortEntry, StravaStatus } from '../types'
 
 interface Props {
   stravaStatus: StravaStatus
@@ -43,25 +43,7 @@ function initials(name?: string | null): string {
 
 export default function ProfilePage({ stravaStatus, unit }: Props) {
   const navigate = useNavigate()
-  const [efforts, setEfforts] = useState<BestEffortsResponse | null>(null)
-  const [effortsLoading, setEffortsLoading] = useState(false)
-  const [effortsError, setEffortsError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetchAthleteEfforts().then(setEfforts).catch(() => setEfforts({ computed: false }))
-  }, [])
-
-  async function handleComputeEfforts() {
-    setEffortsLoading(true)
-    setEffortsError(null)
-    try {
-      setEfforts(await refreshAthleteEfforts())
-    } catch (e) {
-      setEffortsError(e instanceof Error ? e.message : 'Failed to compute')
-    } finally {
-      setEffortsLoading(false)
-    }
-  }
+  const { efforts, loading: effortsLoading, error: effortsError, refresh: handleComputeEfforts } = useAthleteEfforts()
 
   function disconnect() {
     clearToken()

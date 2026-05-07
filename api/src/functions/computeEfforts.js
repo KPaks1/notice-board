@@ -1,4 +1,5 @@
 import { getToken, saveToken } from '../tableClient.js'
+import { stravaGet } from '../stravaClient.js'
 
 const TARGETS = [
   { distanceM: 100,   label: '100m',   minM: 60,   maxM: 200   },
@@ -98,12 +99,10 @@ async function fetchRollingBests(runs, accessToken, streamCache = {}) {
 
     // Cache miss — fetch stream and store result (even if null, so we don't retry)
     try {
-      const res = await fetch(
-        `https://www.strava.com/api/v3/activities/${activity.id}/streams?keys=distance,time&key_by_type=true`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
+      const data = await stravaGet(
+        `/activities/${activity.id}/streams?keys=distance,time&key_by_type=true`,
+        accessToken,
       )
-      if (!res.ok) return
-      const data = await res.json()
       const distances = data.distance?.data ?? []
       const times    = data.time?.data    ?? []
 
@@ -218,12 +217,7 @@ export function estimateTimeForDistance(effortList, distanceM) {
 }
 
 export async function computeAndSaveBestEfforts(athleteId, accessToken) {
-  const res = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=200', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
-  if (!res.ok) throw new Error(`Strava activities fetch failed: ${res.status}`)
-
-  const activities = await res.json()
+  const activities = await stravaGet('/athlete/activities?per_page=200', accessToken)
   const runs  = activities.filter((a) => RUN_TYPES.has(a.sport_type))
   const rides = activities.filter((a) => RIDE_TYPES.has(a.sport_type))
 
