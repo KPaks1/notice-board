@@ -4,32 +4,42 @@ import type { ScoredSegment } from '../types'
 
 interface Coords { lat: number; lng: number }
 
-export function useSegments(coords: Coords | null, activityType: string, targetType: string) {
+// Snap to ~1km grid so minor GPS jitter doesn't invalidate cache keys
+const SNAP = 0.01
+const snap = (v: number) => Math.round(v / SNAP) * SNAP
+
+export function useSegments(coords: Coords | null, activityType: string, targetType: string, radiusKm: number) {
   const [allSegments, setAllSegments] = useState<ScoredSegment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const fetchKey = `${activityType}:${targetType}`
+  const coordsRef = useRef(coords)
+  coordsRef.current = coords
+
+  const snappedLat = coords ? snap(coords.lat) : null
+  const snappedLng = coords ? snap(coords.lng) : null
+  const fetchKey = snappedLat != null ? `${snappedLat}:${snappedLng}:${activityType}:${targetType}:${radiusKm}` : null
   const prevFetchKey = useRef<string | null>(null)
 
   const refresh = useCallback(async () => {
-    if (!coords) return
+    const c = coordsRef.current
+    if (!c) return
     setLoading(true)
     setError(null)
     try {
-      setAllSegments(await fetchSegments(coords.lat, coords.lng, activityType, targetType))
+      setAllSegments(await fetchSegments(c.lat, c.lng, activityType, targetType, radiusKm))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }
-  }, [coords, activityType, targetType])
+  }, [activityType, targetType, radiusKm])
 
   useEffect(() => {
-    if (!coords) return
+    if (!fetchKey) return
     if (prevFetchKey.current === fetchKey && allSegments.length > 0) return
     prevFetchKey.current = fetchKey
     refresh()
-  }, [coords, fetchKey, refresh, allSegments.length])
+  }, [fetchKey, refresh, allSegments.length])
 
   return { allSegments, loading, error, refresh }
 }

@@ -114,7 +114,7 @@ export async function getValidToken(userId) {
   }
 }
 
-const SEGMENT_CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+const SEGMENT_CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 export async function getSegmentCache(segId, athleteId) {
   const client = getClient()
@@ -137,6 +137,35 @@ export async function setSegmentCache(segId, athleteId, data) {
       rowKey: `${segId}:${athleteId}`,
       data: JSON.stringify(data),
       cachedAt: new Date().toISOString(),
+    },
+    'Replace',
+  )
+}
+
+export async function getSegmentPool(athleteId, activityType) {
+  const client = getClient()
+  try {
+    const entity = await client.getEntity('segPool', `${athleteId}:${activityType}`)
+    const segments = entity.data ? JSON.parse(entity.data) : []
+    // Treat legacy pool entries (no updatedAt) as fresh so we don't re-tile immediately
+    const updatedAt = entity.updatedAt
+      ? new Date(entity.updatedAt).getTime()
+      : segments.length > 0 ? Date.now() : 0
+    return { segments, updatedAt }
+  } catch (err) {
+    if (err.statusCode === 404) return { segments: [], updatedAt: 0 }
+    throw err
+  }
+}
+
+export async function setSegmentPool(athleteId, activityType, segments) {
+  const client = await getClientReady()
+  await client.upsertEntity(
+    {
+      partitionKey: 'segPool',
+      rowKey: `${athleteId}:${activityType}`,
+      data: JSON.stringify(segments),
+      updatedAt: new Date().toISOString(),
     },
     'Replace',
   )

@@ -1,5 +1,5 @@
 import { app } from '@azure/functions'
-import { getValidToken, getSegmentCache, setSegmentCache } from '../tableClient.js'
+import { getValidToken, getSegmentCache, setSegmentCache, getSegmentPool, setSegmentPool } from '../tableClient.js'
 import { estimateTimeForDistance } from './computeEfforts.js'
 import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
@@ -7,14 +7,27 @@ import { StravaError, stravaHttpStatus } from '../stravaError.js'
 import { stravaGet } from '../stravaClient.js'
 import { translateToEnglish } from '../translator.js'
 
-const TTL_EXPLORE = 60 * 60       // segment list: 1 hour
-const TTL_LEADERBOARD = 15 * 60   // leaderboard times: 15 min
+const TTL_EXPLORE = 4 * 60 * 60   // segment list: 4 hours
+const TTL_LEADERBOARD = 4 * 60 * 60  // segment details/KOM: 4 hours
 const TTL_STATS = 60 * 60         // athlete stats: 1 hour
 
-function boundingBox(lat, lng, radiusKm) {
+const SNAP = 0.01 // ~1km grid — keeps tile cache keys stable across minor GPS jitter
+const snapCoord = (v) => Math.round(v / SNAP) * SNAP
+
+function generateTiles(lat, lng, radiusKm, cols = 5, rows = 4) {
   const latDelta = radiusKm / 111.32
   const lngDelta = latDelta / Math.cos((lat * Math.PI) / 180)
-  return [lat - latDelta, lng - lngDelta, lat + latDelta, lng + lngDelta].join(',')
+  const tileH = (latDelta * 2) / rows
+  const tileW = (lngDelta * 2) / cols
+  const tiles = []
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const s = lat - latDelta + r * tileH
+      const w = lng - lngDelta + c * tileW
+      tiles.push(`${s},${w},${s + tileH},${w + tileW}`)
+    }
+  }
+  return tiles
 }
 
 
@@ -42,6 +55,19 @@ function targetLabel(targetType) {
   return targetType === 'personal_best' ? 'Your Best' : 'CR'
 }
 
+async function mapWithConcurrency(arr, limit, fn) {
+  const results = new Array(arr.length)
+  let next = 0
+  async function worker() {
+    while (next < arr.length) {
+      const i = next++
+      results[i] = await fn(arr[i], i)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, arr.length) }, worker))
+  return results
+}
+
 app.http('segments', {
   methods: ['GET'],
   authLevel: 'anonymous',
@@ -63,32 +89,87 @@ app.http('segments', {
     const activityType = request.query.get('activityType') ?? 'running'
     const targetType = request.query.get('targetType') ?? 'kom'
 
+    const radiusKm = Math.min(parseFloat(request.query.get('radiusKm') ?? '5'), 20)
+
     if (isNaN(lat) || isNaN(lng)) {
       return { status: 400, jsonBody: { error: 'lat and lng are required' } }
     }
 
-    // Always fetch at max radius — client filters by actual radius
-    const bbox = boundingBox(lat, lng, 20)
     const stravaActivityType = activityType === 'cycling' ? 'riding' : 'running'
 
-    const exploreKey = `explore:${bbox}:${activityType}`
-    let exploreResults = cacheGet(exploreKey)
-    if (!exploreResults) {
+    const trimSeg = (s) => ({
+      id: s.id,
+      name: s.name,
+      distance: s.distance,
+      activity_type: s.activity_type,
+      start_latlng: s.start_latlng,
+      end_latlng: s.end_latlng,
+      elevation_high: s.elevation_high,
+      elevation_low: s.elevation_low,
+      city: s.city ?? null,
+      state: s.state ?? null,
+    })
+
+    // Load pool from L1 (warm) or L2 (cold start)
+    const poolL1Key = `pool:${athleteId}:${activityType}`
+    let poolData = cacheGet(poolL1Key)
+    if (!poolData) {
       try {
-        const data = await stravaGet(
-          `/segments/explore?bounds=${bbox}&activity_type=${stravaActivityType}`,
-          accessToken,
-        )
-        exploreResults = data.segments ?? []
-        cacheSet(exploreKey, exploreResults, TTL_EXPLORE)
+        poolData = await getSegmentPool(athleteId, activityType)
+        cacheSet(poolL1Key, poolData, TTL_EXPLORE)
       } catch (err) {
-        context.error('Segment explore failed:', err.message)
-        const status = err instanceof StravaError ? stravaHttpStatus(err.status) : 502
-        return { status, jsonBody: { error: err.message } }
+        context.warn('Could not load segment pool:', err.message)
+        poolData = { segments: [], updatedAt: 0 }
       }
     }
 
-    if (exploreResults.length === 0) {
+    const poolById = new Map(poolData.segments.map((s) => [s.id, s]))
+    const poolAgeMs = Date.now() - poolData.updatedAt
+
+    // Only run tile queries when the pool is stale — skips 20 Strava calls on cold starts
+    if (poolAgeMs > TTL_EXPLORE * 1000) {
+      const tiles = generateTiles(snapCoord(lat), snapCoord(lng), radiusKm)
+      const tileResults = await Promise.all(
+        tiles.map(async (bbox) => {
+          const tileKey = `explore:${bbox}:${activityType}`
+          let segs = cacheGet(tileKey)
+          if (!segs) {
+            try {
+              const data = await stravaGet(
+                `/segments/explore?bounds=${bbox}&activity_type=${stravaActivityType}`,
+                accessToken,
+              )
+              segs = data.segments ?? []
+              cacheSet(tileKey, segs, TTL_EXPLORE)
+            } catch (err) {
+              context.warn(`Tile explore failed for ${bbox}:`, err.message)
+              segs = []
+            }
+          }
+          return segs
+        }),
+      )
+
+      let poolUpdated = false
+      for (const seg of tileResults.flat()) {
+        if (!poolById.has(seg.id)) {
+          poolById.set(seg.id, trimSeg(seg))
+          poolUpdated = true
+        }
+      }
+      if (poolUpdated) {
+        const updated = [...poolById.values()]
+        setSegmentPool(athleteId, activityType, updated)  // background write
+        cacheSet(poolL1Key, { segments: updated, updatedAt: Date.now() }, TTL_EXPLORE)
+      } else {
+        // Pool unchanged but still refresh the updatedAt so we don't re-tile next time
+        setSegmentPool(athleteId, activityType, poolData.segments)
+        cacheSet(poolL1Key, { segments: poolData.segments, updatedAt: Date.now() }, TTL_EXPLORE)
+      }
+    }
+
+    const allSegments = [...poolById.values()]
+    if (allSegments.length === 0) {
       return { jsonBody: [] }
     }
 
@@ -111,10 +192,12 @@ app.http('segments', {
     }
     const effortList = activityType === 'cycling' ? bestEfforts?.ride : bestEfforts?.run
 
-    const top10 = exploreResults.slice(0, 10)
+    // Limit live Strava fetches per request — uncached segments are skipped and filled in
+    // on subsequent requests as L2 warms up, preventing rate limit bursts on cold starts
+    let stravaDetailFetches = 0
+    const MAX_DETAIL_FETCHES = 10
 
-    const scored = await Promise.all(
-      top10.map(async (seg) => {
+    const scored = await mapWithConcurrency(allSegments, 5, async (seg) => {
         try {
           const segKey = `seg:${seg.id}:${athleteId}`
           let segDetail = cacheGet(segKey)                         // L1: in-memory
@@ -122,11 +205,14 @@ app.http('segments', {
             segDetail = await getSegmentCache(seg.id, athleteId)   // L2: Azure Table
             if (segDetail) {
               cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // warm L1 from L2
-            } else {
+            } else if (stravaDetailFetches < MAX_DETAIL_FETCHES) {
+              stravaDetailFetches++
               segDetail = await stravaGet(`/segments/${seg.id}`, accessToken)
               segDetail.translatedName = await translateToEnglish(segDetail.name)
               cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // write L1
               setSegmentCache(seg.id, athleteId, segDetail)         // write L2 (background)
+            } else {
+              return null                                           // skip — will score next request
             }
           }
 
@@ -186,8 +272,7 @@ app.http('segments', {
           context.warn(`Failed to score segment ${seg.id}:`, err.message)
           return null
         }
-      }),
-    )
+      })
 
     const results = scored.filter(Boolean).sort((a, b) => b.score - a.score)
     return { jsonBody: results }

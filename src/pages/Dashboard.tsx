@@ -44,7 +44,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [settings, setSettings] = useState<Settings>(() => loadSettings(stravaStatus))
   const { coords, error: locError } = useLocation()
-  const { allSegments, loading, error, refresh } = useSegments(coords, settings.activityType, settings.targetType)
+  const { allSegments, loading, error, refresh } = useSegments(coords, settings.activityType, settings.targetType, settings.radiusKm)
   const mainRef = useRef<HTMLElement>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [roadDistances, setRoadDistances] = useState<Record<number, number>>({})

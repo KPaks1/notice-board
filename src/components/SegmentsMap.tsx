@@ -23,6 +23,7 @@ function badgeText(score: number): string {
 export default function SegmentsMap({ segments, userLat, userLng, onSegmentClick }: Props) {
   return (
     <MapContainer
+      key={`${userLat},${userLng}`}
       center={[userLat, userLng]}
       zoom={13}
       style={{ height: '100%', width: '100%' }}

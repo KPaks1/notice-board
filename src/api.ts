@@ -27,12 +27,14 @@ export async function fetchSegments(
   lng: number,
   activityType: string,
   targetType: string,
+  radiusKm: number,
 ): Promise<ScoredSegment[]> {
   const params = new URLSearchParams({
     lat: String(lat),
     lng: String(lng),
     activityType,
     targetType,
+    radiusKm: String(radiusKm),
   })
   const res = await fetch(`/api/segments?${params}`, { headers: authHeaders() })
   if (!res.ok) {

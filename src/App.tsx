@@ -1,10 +1,22 @@
-import { useEffect, useState } from 'react'
+import { Component, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { fetchStravaStatus, refreshAthleteEfforts, storeToken } from './api'
 import type { StravaStatus } from './types'
 import ConnectStrava from './pages/ConnectStrava'
 import Dashboard from './pages/Dashboard'
+import ErrorPage from './pages/ErrorPage'
 import SegmentDetailPage from './pages/SegmentDetailPage'
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
+  state = { crashed: false }
+  static getDerivedStateFromError() { return { crashed: true } }
+  componentDidCatch(err: unknown) { console.error('Uncaught render error:', err) }
+  render() {
+    if (this.state.crashed) return <ErrorPage />
+    return this.props.children
+  }
+}
 
 // Handle token from OAuth redirect synchronously before React renders,
 // so fetchStravaStatus() always finds the token already in sessionStorage.
@@ -85,12 +97,14 @@ function OnboardingGate({ status }: { status: StravaStatus }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/connect-strava" element={<ConnectStrava />} />
-        <Route path="/" element={<StravaGuard>{(status) => <OnboardingGate status={status} />}</StravaGuard>} />
-        <Route path="/segment/:id" element={<StravaGuard>{() => <SegmentDetailPage />}</StravaGuard>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/connect-strava" element={<ConnectStrava />} />
+          <Route path="/" element={<StravaGuard>{(status) => <OnboardingGate status={status} />}</StravaGuard>} />
+          <Route path="/segment/:id" element={<StravaGuard>{() => <SegmentDetailPage />}</StravaGuard>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }
