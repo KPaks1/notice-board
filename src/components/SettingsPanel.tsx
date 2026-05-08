@@ -7,7 +7,7 @@ interface Props {
 }
 
 const TARGET_OPTIONS: { value: TargetType; label: string }[] = [
-  { value: 'kom', label: 'KOM / QOM' },
+  { value: 'kom', label: 'Course Record' },
   { value: 'personal_best', label: 'Personal Best' },
 ]
 
@@ -46,7 +46,7 @@ export default function SettingsPanel({ settings, onChange }: Props) {
         <input
           type="range"
           min={0.5}
-          max={100}
+          max={20}
           step={0.5}
           value={settings.radiusKm}
           onChange={(e) => onChange({ ...settings, radiusKm: Number(e.target.value) })}
@@ -54,7 +54,7 @@ export default function SettingsPanel({ settings, onChange }: Props) {
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>{formatRadius(0.5, u)}</span>
-          <span>{formatRadius(100, u)}</span>
+          <span>{formatRadius(20, u)}</span>
         </div>
       </div>
 

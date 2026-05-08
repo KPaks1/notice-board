@@ -29,7 +29,10 @@ function getDefaultSettings(status: StravaStatus): Settings {
 function loadSettings(status: StravaStatus): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
-    if (raw) return { ...getDefaultSettings(status), ...JSON.parse(raw) }
+    if (raw) {
+      const saved = JSON.parse(raw)
+      return { ...getDefaultSettings(status), ...saved, radiusKm: Math.min(saved.radiusKm ?? 5, 20) }
+    }
   } catch {}
   return getDefaultSettings(status)
 }
