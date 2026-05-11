@@ -62,7 +62,7 @@ export default function SegmentCard({ segment, unit, userLat, userLng, roadDista
 
         <div className="text-xs text-gray-500 mb-3">
           {formatDistance(segment.distance, unit)}
-          {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
+          {segment.elevationGain > 0 && ` · ↑${Math.round(segment.elevationGain)}m ↓${Math.round(segment.elevationLoss)}m`}
           {distanceM != null && <> · <DistanceToStart distanceM={distanceM} isByPlane={isByPlane} unit={unit} /></>}
           {segment.city && ` · ${segment.city}`}
         </div>

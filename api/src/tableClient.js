@@ -136,6 +136,34 @@ export async function getValidToken(userId) {
   }
 }
 
+const ELEVATION_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days — elevation never changes
+
+export async function getElevationCache(segId) {
+  const client = getClient()
+  try {
+    const entity = await client.getEntity('eleCache', String(segId))
+    if (!entity.cachedAt) return null
+    if (Date.now() - new Date(entity.cachedAt).getTime() > ELEVATION_CACHE_TTL_MS) return null
+    return entity.data ? decompress(entity.data) : null
+  } catch (err) {
+    if (err.statusCode === 404) return null
+    throw err
+  }
+}
+
+export async function setElevationCache(segId, data) {
+  const client = await getClientReady()
+  await client.upsertEntity(
+    {
+      partitionKey: 'eleCache',
+      rowKey: String(segId),
+      data: compress(data),
+      cachedAt: new Date().toISOString(),
+    },
+    'Replace',
+  )
+}
+
 const SEGMENT_CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 export async function getSegmentCache(segId, athleteId) {

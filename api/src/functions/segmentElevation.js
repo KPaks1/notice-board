@@ -1,10 +1,20 @@
 import { app } from '@azure/functions'
-import { getValidToken } from '../tableClient.js'
+import { getValidToken, getElevationCache, setElevationCache } from '../tableClient.js'
 import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
 import { stravaGet } from '../stravaClient.js'
 
-const TTL = 12 * 60 * 60 // 12 h — elevation never changes
+const TTL = 12 * 60 * 60 // 12 h L1 TTL
+
+function computeGainLoss(altitude) {
+  let gain = 0, loss = 0
+  for (let i = 1; i < altitude.length; i++) {
+    const diff = altitude[i] - altitude[i - 1]
+    if (diff > 0) gain += diff
+    else loss -= diff
+  }
+  return { gain: Math.round(gain), loss: Math.round(loss) }
+}
 
 app.http('segmentElevation', {
   methods: ['GET'],
@@ -24,6 +34,12 @@ app.http('segmentElevation', {
     const cached = cacheGet(key)
     if (cached) return { jsonBody: cached }
 
+    const l2 = await getElevationCache(id)
+    if (l2) {
+      cacheSet(key, l2, TTL)
+      return { jsonBody: l2 }
+    }
+
     try {
       const streams = await stravaGet(
         `/segments/${id}/streams?keys=altitude,distance&series_type=distance`,
@@ -31,8 +47,9 @@ app.http('segmentElevation', {
       )
       const altitude = streams.find((s) => s.type === 'altitude')?.data ?? []
       const distance = streams.find((s) => s.type === 'distance')?.data ?? []
-      const result = { altitude, distance }
+      const result = { altitude, distance, ...computeGainLoss(altitude) }
       cacheSet(key, result, TTL)
+      setElevationCache(id, result) // background write to L2
       return { jsonBody: result }
     } catch (err) {
       context.warn(`Failed to fetch elevation for segment ${id}:`, err.message)

@@ -62,6 +62,7 @@ export default function SettingsPanel({ settings, onChange, onResetPool, segment
         </div>
       </div>
 
+      <div className="md:hidden space-y-8">
       <div>
         <label className="block text-sm font-semibold text-white mb-3">
           Search Radius
@@ -127,6 +128,7 @@ export default function SettingsPanel({ settings, onChange, onResetPool, segment
           <span>{formatElevation(elevMax, u)}</span>
         </div>
       </div>
+      </div>{/* end md:hidden */}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -168,7 +170,7 @@ export default function SettingsPanel({ settings, onChange, onResetPool, segment
         </div>
       </div>
 
-      <div className="text-sm text-gray-400">
+      <div className="md:hidden text-sm text-gray-400">
         Hunt <span className="text-white font-medium">{segmentCounts.hunt}</span>
         <span className="mx-2 text-gray-600">/</span>
         Harvest <span className="text-white font-medium">{segmentCounts.harvest}</span>

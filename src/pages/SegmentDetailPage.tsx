@@ -229,7 +229,7 @@ export default function SegmentDetailPage() {
         <div className="px-4 pb-4 overflow-y-auto no-scrollbar space-y-5 md:w-[420px] md:shrink-0 md:border-r md:border-gray-800 md:py-6 md:px-6">
           <div className="text-xs text-gray-500">
             {formatDistance(segment.distance, unit)}
-            {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
+            {segment.elevationGain > 0 && ` · ↑${Math.round(segment.elevationGain)}m ↓${Math.round(segment.elevationLoss)}m`}
             {segment.city && ` · ${segment.city}`}
             {displayDistanceM != null && <> · <DistanceToStart distanceM={displayDistanceM} isByPlane={isByPlane} unit={unit} /></>}
           </div>

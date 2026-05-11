@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUp, List, Map, RefreshCw } from 'lucide-react'
+import { ArrowUp, List, LocateFixed, Map, RefreshCw } from 'lucide-react'
+import L from 'leaflet'
 import { useLocation } from '../hooks/useLocation'
 import { useSegments } from '../hooks/useSegments'
 import { formatRadius } from '../format'
@@ -11,6 +12,7 @@ import { haversineKm } from '../geo'
 import EvictionsList from '../components/EvictionsList'
 import SegmentsMap from '../components/SegmentsMap'
 import SettingsPanel from '../components/SettingsPanel'
+import MapFilterOverlay from '../components/MapFilterOverlay'
 import ProfilePage from './ProfilePage'
 import poweredByStrava from '../assets/strava/powered-by/api_logo_pwrdBy_strava_horiz_white.svg'
 
@@ -54,6 +56,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const { coords, error: locError } = useLocation()
   const { allSegments, loading, error, refresh } = useSegments(coords, settings.activityType, settings.targetType, settings.radiusKm)
   const listRef = useRef<HTMLDivElement>(null)
+  const segMapRef = useRef<L.Map | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [roadDistances, setRoadDistances] = useState<Record<number, number>>({})
   const [hoveredSegmentId, setHoveredSegmentId] = useState<number | null>(null)
@@ -278,18 +281,35 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
         {/* Map panel */}
         <div className={[
-          tab === 'evictions' && viewMode === 'map' ? 'flex-1 overflow-hidden pb-14' : 'hidden',
-          tab === 'evictions' ? 'md:flex md:flex-1 md:pb-0' : 'md:hidden',
+          tab === 'evictions' && viewMode === 'map' ? 'flex-1 overflow-hidden pb-14 relative' : 'hidden',
+          tab === 'evictions' ? 'md:flex md:flex-1 md:pb-0 md:relative' : 'md:hidden',
         ].join(' ')}>
           {coords ? (
-            <SegmentsMap
-              segments={segments}
-              userLat={coords.lat}
-              userLng={coords.lng}
-              hoveredSegmentId={hoveredSegmentId}
-              onSegmentClick={mapClickHandler}
-              onSegmentHover={handleHoverSegment}
-            />
+            <>
+              <SegmentsMap
+                segments={segments}
+                userLat={coords.lat}
+                userLng={coords.lng}
+                hoveredSegmentId={hoveredSegmentId}
+                onSegmentClick={mapClickHandler}
+                onSegmentHover={handleHoverSegment}
+                onMapReady={(m) => { segMapRef.current = m }}
+              />
+              <button
+                onClick={() => segMapRef.current?.setView([coords.lat, coords.lng], 13)}
+                className="absolute top-4 right-4 z-[1003] p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-blue-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
+                aria-label="Recentre on my location"
+              >
+                <LocateFixed size={16} />
+              </button>
+              <MapFilterOverlay
+                settings={settings}
+                onChange={setSettings}
+                segmentDistanceRange={segmentDistanceRange}
+                segmentElevationRange={segmentElevationRange}
+                segmentCount={settings.mode === 'hunt' ? segmentCounts.hunt : segmentCounts.harvest}
+              />
+            </>
           ) : (
             <div className="flex flex-1 items-center justify-center text-gray-500 text-sm">
               Waiting for location…
@@ -323,7 +343,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
       <button
         onClick={() => listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-        className={`fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[1002] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[1004] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         aria-label="Back to top"
       >
         <ArrowUp size={18} />

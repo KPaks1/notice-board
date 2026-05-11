@@ -10,6 +10,7 @@ interface Props {
   hoveredSegmentId?: number | null
   onSegmentClick: (id: number) => void
   onSegmentHover?: (id: number | null) => void
+  onMapReady?: (map: L.Map) => void
 }
 
 function markerColor(score: number): string {
@@ -22,6 +23,12 @@ function badgeText(score: number): string {
   if (score > 0) return 'BEATABLE'
   if (score > -0.05) return 'CLOSE'
   return 'TOUGH'
+}
+
+function MapReadyCallback({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
+  const map = useMap()
+  useEffect(() => { onMapReady(map) }, [map, onMapReady])
+  return null
 }
 
 // Calls invalidateSize when the map container is revealed after being hidden (display:none).
@@ -89,7 +96,7 @@ function SegmentMarker({ seg, hovered, onSegmentClick, onSegmentHover }: { seg: 
   )
 }
 
-export default function SegmentsMap({ segments, userLat, userLng, hoveredSegmentId, onSegmentClick, onSegmentHover }: Props) {
+export default function SegmentsMap({ segments, userLat, userLng, hoveredSegmentId, onSegmentClick, onSegmentHover, onMapReady }: Props) {
   return (
     <MapContainer
       key={`${userLat},${userLng}`}
@@ -102,6 +109,7 @@ export default function SegmentsMap({ segments, userLat, userLng, hoveredSegment
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
       <MapInvalidator />
+      {onMapReady && <MapReadyCallback onMapReady={onMapReady} />}
       <Marker position={[userLat, userLng]} />
       {segments.map((seg) => (
         <SegmentMarker

@@ -1,5 +1,5 @@
 import { app } from '@azure/functions'
-import { getValidToken, getSegmentCache, setSegmentCache, getSegmentPool, setSegmentPool } from '../tableClient.js'
+import { getValidToken, getSegmentCache, setSegmentCache, getSegmentPool, setSegmentPool, getElevationCache } from '../tableClient.js'
 import { estimateTimeForDistance } from './computeEfforts.js'
 import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
@@ -260,12 +260,17 @@ app.http('segments', {
 
           const estimatedTime = estimateTimeForDistance(effortList, segDistance)
 
+          const eleCache = cacheGet(`elevation:${seg.id}`) ?? await getElevationCache(seg.id)
+          const elevationGain = segDetail.total_elevation_gain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0))
+          const elevationLoss = eleCache?.loss ?? Math.abs(Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0)) - elevationGain)
+
           return {
             id: seg.id,
             name: seg.name,
             translatedName: segDetail.translatedName ?? null,
             distance: segDistance,
-            elevationGain: segDetail.total_elevation_gain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0)),
+            elevationGain,
+            elevationLoss,
             activityType: seg.activity_type,
             score,
             targetTime,

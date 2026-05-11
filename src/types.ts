@@ -22,6 +22,7 @@ export interface ScoredSegment {
   translatedName: string | null
   distance: number
   elevationGain: number
+  elevationLoss: number
   activityType: string
   score: number
   targetTime: number
