@@ -1,5 +1,5 @@
 import { app } from '@azure/functions'
-import { getValidToken, getSegmentCache, setSegmentCache, getSegmentPool, setSegmentPool, getElevationCache } from '../tableClient.js'
+import { getValidToken, getSegmentCache, setSegmentCache, getSegmentPool, setSegmentPool } from '../tableClient.js'
 import { estimateTimeForDistance } from './computeEfforts.js'
 import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
@@ -260,9 +260,11 @@ app.http('segments', {
 
           const estimatedTime = estimateTimeForDistance(effortList, segDistance)
 
-          const eleCache = cacheGet(`elevation:${seg.id}`) ?? await getElevationCache(seg.id)
+          // Only check L1 — L2 reads per-segment would add too much latency to the bulk endpoint.
+          // Elevation loss becomes accurate once the user visits a segment detail page (L1 warms from segmentElevation endpoint).
+          const eleCache = cacheGet(`elevation:${seg.id}`)
           const elevationGain = segDetail.total_elevation_gain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0))
-          const elevationLoss = eleCache?.loss ?? Math.abs(Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0)) - elevationGain)
+          const elevationLoss = eleCache?.loss ?? 0
 
           return {
             id: seg.id,

@@ -76,20 +76,20 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
 
             <div>
               <div className="flex justify-between items-baseline mb-2">
-                <span className="text-xs font-semibold text-white">Elevation Gain</span>
+                <span className="text-xs font-semibold text-white">Elevation Change</span>
                 <span className="text-xs text-strava">
-                  {settings.minElevationGain <= 0 ? 'Any' : formatElevation(settings.minElevationGain, u)}
+                  {settings.minElevationChange <= 0 ? 'Any' : formatElevation(settings.minElevationChange, u)}
                   {' — '}
-                  {formatElevation(Math.min(settings.maxElevationGain, elevMax), u)}
+                  {formatElevation(Math.min(settings.maxElevationChange, elevMax), u)}
                 </span>
               </div>
               <RangeSlider
                 min={0}
                 max={elevMax}
                 step={5}
-                valueMin={Math.max(settings.minElevationGain, 0)}
-                valueMax={Math.min(settings.maxElevationGain, elevMax)}
-                onChange={(lo, hi) => onChange({ ...settings, minElevationGain: lo, maxElevationGain: hi })}
+                valueMin={Math.max(settings.minElevationChange, 0)}
+                valueMax={Math.min(settings.maxElevationChange, elevMax)}
+                onChange={(lo, hi) => onChange({ ...settings, minElevationChange: lo, maxElevationChange: hi })}
               />
               <div className="flex justify-between text-xs text-gray-600 mt-1">
                 <span>0m</span>

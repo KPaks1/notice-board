@@ -108,20 +108,20 @@ export default function SettingsPanel({ settings, onChange, onResetPool, segment
 
       <div>
         <label className="block text-sm font-semibold text-white mb-3">
-          Elevation Gain
+          Elevation Change
           <span className="ml-2 font-normal text-strava">
-            {settings.minElevationGain <= elevMin ? 'Any' : formatElevation(settings.minElevationGain, u)}
+            {settings.minElevationChange <= elevMin ? 'Any' : formatElevation(settings.minElevationChange, u)}
             {' — '}
-            {formatElevation(Math.min(settings.maxElevationGain, elevMax), u)}
+            {formatElevation(Math.min(settings.maxElevationChange, elevMax), u)}
           </span>
         </label>
         <RangeSlider
           min={elevMin}
           max={elevMax}
           step={5}
-          valueMin={Math.max(settings.minElevationGain, elevMin)}
-          valueMax={Math.min(settings.maxElevationGain, elevMax)}
-          onChange={(lo, hi) => onChange({ ...settings, minElevationGain: lo, maxElevationGain: hi })}
+          valueMin={Math.max(settings.minElevationChange, elevMin)}
+          valueMax={Math.min(settings.maxElevationChange, elevMax)}
+          onChange={(lo, hi) => onChange({ ...settings, minElevationChange: lo, maxElevationChange: hi })}
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>{formatElevation(elevMin, u)}</span>

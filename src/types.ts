@@ -9,8 +9,8 @@ export interface Settings {
   targetType: TargetType
   minSegmentKm: number
   maxSegmentKm: number
-  minElevationGain: number
-  maxElevationGain: number
+  minElevationChange: number
+  maxElevationChange: number
   mode: SegmentMode
   sortBy: SortBy
   unit: 'km' | 'mile'
