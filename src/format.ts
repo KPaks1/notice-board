@@ -32,3 +32,8 @@ export function formatKm(km: number, unit: Unit = 'km'): string {
   if (unit === 'mile') return `${(km / 1.60934).toFixed(2)} mi`
   return `${km} km`
 }
+
+export function formatElevation(metres: number, unit: Unit = 'km'): string {
+  if (unit === 'mile') return `${Math.round(metres * 3.281)}ft`
+  return `${Math.round(metres)}m`
+}

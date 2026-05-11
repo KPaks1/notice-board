@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import type { Settings, ActivityType, TargetType } from '../types'
-import { formatRadius, formatKm } from '../format'
+import { formatRadius, formatKm, formatElevation } from '../format'
+import RangeSlider from './RangeSlider'
 
 interface Props {
   settings: Settings
   onChange: (s: Settings) => void
   onResetPool: () => Promise<void>
   segmentDistanceRange: { min: number; max: number } | null
+  segmentElevationRange: { min: number; max: number } | null
+  segmentCounts: { hunt: number; harvest: number }
 }
 
 const TARGET_OPTIONS: { value: TargetType; label: string }[] = [
@@ -19,9 +22,11 @@ const ACTIVITY_OPTIONS: { value: ActivityType; label: string }[] = [
   { value: 'cycling', label: 'Cycling' },
 ]
 
-export default function SettingsPanel({ settings, onChange, onResetPool, segmentDistanceRange }: Props) {
+export default function SettingsPanel({ settings, onChange, onResetPool, segmentDistanceRange, segmentElevationRange, segmentCounts }: Props) {
   const distMin = segmentDistanceRange?.min ?? 0
   const distMax = segmentDistanceRange?.max ?? 50
+  const elevMin = 0
+  const elevMax = segmentElevationRange?.max ?? 25
   const u = settings.unit
   const [resetting, setResetting] = useState(false)
   const [resetDone, setResetDone] = useState(false)
@@ -86,37 +91,40 @@ export default function SettingsPanel({ settings, onChange, onResetPool, segment
             {formatKm(settings.maxSegmentKm, u)}
           </span>
         </label>
-        <div className="space-y-3">
-          <div>
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>Min</span>
-              <span>{formatKm(settings.minSegmentKm, u)}</span>
-            </div>
-            <input
-              type="range"
-              min={distMin}
-              max={settings.maxSegmentKm}
-              step={0.5}
-              value={Math.max(settings.minSegmentKm, distMin)}
-              onChange={(e) => onChange({ ...settings, minSegmentKm: Number(e.target.value) })}
-              className="w-full accent-strava"
-            />
-          </div>
-          <div>
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>Max</span>
-              <span>{formatKm(settings.maxSegmentKm, u)}</span>
-            </div>
-            <input
-              type="range"
-              min={settings.minSegmentKm}
-              max={distMax}
-              step={0.5}
-              value={Math.min(settings.maxSegmentKm, distMax)}
-              onChange={(e) => onChange({ ...settings, maxSegmentKm: Number(e.target.value) })}
-              className="w-full accent-strava"
-            />
-          </div>
+        <RangeSlider
+          min={distMin}
+          max={distMax}
+          step={0.5}
+          valueMin={Math.max(settings.minSegmentKm, distMin)}
+          valueMax={Math.min(settings.maxSegmentKm, distMax)}
+          onChange={(lo, hi) => onChange({ ...settings, minSegmentKm: lo, maxSegmentKm: hi })}
+        />
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>{formatKm(distMin, u)}</span>
+          <span>{formatKm(distMax, u)}</span>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-white mb-3">
+          Elevation Gain
+          <span className="ml-2 font-normal text-strava">
+            {settings.minElevationGain <= elevMin ? 'Any' : formatElevation(settings.minElevationGain, u)}
+            {' — '}
+            {formatElevation(Math.min(settings.maxElevationGain, elevMax), u)}
+          </span>
+        </label>
+        <RangeSlider
+          min={elevMin}
+          max={elevMax}
+          step={5}
+          valueMin={Math.max(settings.minElevationGain, elevMin)}
+          valueMax={Math.min(settings.maxElevationGain, elevMax)}
+          onChange={(lo, hi) => onChange({ ...settings, minElevationGain: lo, maxElevationGain: hi })}
+        />
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>{formatElevation(elevMin, u)}</span>
+          <span>{formatElevation(elevMax, u)}</span>
         </div>
       </div>
 
@@ -158,6 +166,12 @@ export default function SettingsPanel({ settings, onChange, onResetPool, segment
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="text-sm text-gray-400">
+        Hunt <span className="text-white font-medium">{segmentCounts.hunt}</span>
+        <span className="mx-2 text-gray-600">/</span>
+        Harvest <span className="text-white font-medium">{segmentCounts.harvest}</span>
       </div>
 
       <div className="pt-2 border-t border-gray-800 space-y-3">

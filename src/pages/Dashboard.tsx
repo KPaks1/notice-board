@@ -23,6 +23,8 @@ function getDefaultSettings(status: StravaStatus): Settings {
     targetType: 'kom',
     minSegmentKm: 0,
     maxSegmentKm: 10,
+    minElevationGain: 0,
+    maxElevationGain: 9999,
     mode: 'hunt',
     sortBy: 'score',
     unit: 'km',
@@ -97,6 +99,36 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     }
   }, [allSegments])
 
+  const segmentElevationRange = useMemo(() => {
+    if (allSegments.length === 0) return null
+    const gains = allSegments.map((s) => s.elevationGain)
+    return {
+      min: 0,
+      max: Math.ceil(Math.max(...gains) / 25) * 25,
+    }
+  }, [allSegments])
+
+  const segmentCounts = useMemo(() => {
+    if (!coords) return { hunt: 0, harvest: 0 }
+    const distFromUser = (s: ScoredSegment) => s.startLatlng
+      ? haversineKm(coords.lat, coords.lng, s.startLatlng[0], s.startLatlng[1])
+      : haversineKm(coords.lat, coords.lng, s.midpointLat, s.midpointLng)
+    const base = allSegments.filter((s) => {
+      const distKm = s.distance / 1000
+      return (
+        distFromUser(s) <= settings.radiusKm &&
+        distKm >= settings.minSegmentKm &&
+        distKm <= settings.maxSegmentKm &&
+        s.elevationGain >= settings.minElevationGain &&
+        s.elevationGain <= settings.maxElevationGain
+      )
+    })
+    return {
+      hunt: base.filter((s) => s.score >= -0.35 && s.score <= 0.35).length,
+      harvest: base.filter((s) => s.score > 0).length,
+    }
+  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.minElevationGain, settings.maxElevationGain])
+
   // Filter cached segments by radius + distance + mode — no API call
   const segments = useMemo(() => {
     if (!coords) return []
@@ -109,7 +141,9 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       return (
         distFromUser(s) <= settings.radiusKm &&
         distKm >= settings.minSegmentKm &&
-        distKm <= settings.maxSegmentKm
+        distKm <= settings.maxSegmentKm &&
+        s.elevationGain >= settings.minElevationGain &&
+        s.elevationGain <= settings.maxElevationGain
       )
     })
     if (settings.mode === 'hunt') {
@@ -125,7 +159,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       filtered.sort((a, b) => b.score - a.score)
     }
     return filtered
-  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.mode, settings.sortBy])
+  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.minElevationGain, settings.maxElevationGain, settings.mode, settings.sortBy])
 
   const displayError = locError ?? error
   const isMapMode = tab === 'evictions' && viewMode === 'map'
@@ -273,6 +307,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                 onChange={setSettings}
                 onResetPool={async () => { await resetSegmentPool(settings.activityType); refresh() }}
                 segmentDistanceRange={segmentDistanceRange}
+                segmentElevationRange={segmentElevationRange}
+                segmentCounts={segmentCounts}
               />
             </div>
             <div className={tab !== 'profile' ? 'hidden' : ''}>

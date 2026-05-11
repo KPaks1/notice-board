@@ -74,6 +74,12 @@ export async function fetchAthleteEfforts(): Promise<BestEffortsResponse> {
   return res.json()
 }
 
+export async function fetchSegmentElevation(id: number): Promise<{ altitude: number[]; distance: number[] } | null> {
+  const res = await fetch(`/api/segment-elevation?id=${id}`, { headers: authHeaders() })
+  if (!res.ok) return null
+  return res.json()
+}
+
 export async function refreshAthleteEfforts(): Promise<BestEffortsResponse> {
   const res = await fetch('/api/athlete-efforts/refresh', {
     method: 'POST',

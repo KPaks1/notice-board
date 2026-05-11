@@ -265,7 +265,7 @@ app.http('segments', {
             name: seg.name,
             translatedName: segDetail.translatedName ?? null,
             distance: segDistance,
-            elevationGain: Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0)),
+            elevationGain: segDetail.total_elevation_gain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0)),
             activityType: seg.activity_type,
             score,
             targetTime,

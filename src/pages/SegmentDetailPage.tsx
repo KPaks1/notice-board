@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Crosshair, ExternalLink, LocateFixed, Navigation, Star } from 'lucide-react'
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
-import { clearToken, starSegment } from '../api'
+import { clearToken, fetchSegmentElevation, starSegment } from '../api'
 import { fetchRoadDistance } from '../osrm'
 import { haversineKm } from '../geo'
 import DistanceToStart from '../components/DistanceToStart'
+import ElevationChart from '../components/ElevationChart'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 import type { ScoredSegment } from '../types'
 
@@ -98,6 +99,16 @@ export default function SegmentDetailPage() {
   const userLat: number | null = state?.userLat ?? null
   const userLng: number | null = state?.userLng ?? null
   const [roadDistance, setRoadDistance] = useState<number | null>(null)
+  const [elevation, setElevation] = useState<{ altitude: number[]; distance: number[] } | null>(null)
+  const [elevationLoading, setElevationLoading] = useState(true)
+
+  useEffect(() => {
+    if (!segment) return
+    setElevationLoading(true)
+    fetchSegmentElevation(segment.id)
+      .then((data) => { if (data) setElevation(data) })
+      .finally(() => setElevationLoading(false))
+  }, [segment?.id])
 
   useEffect(() => {
     if (!segment?.startLatlng || userLat == null || userLng == null) return
@@ -109,6 +120,54 @@ export default function SegmentDetailPage() {
       .finally(() => clearTimeout(timeout))
     return () => { controller.abort(); clearTimeout(timeout) }
   }, [segment?.id, userLat, userLng])
+
+  // Stable memoised path — decoded once so downstream memos don't thrash
+  const decodedPath = useMemo(
+    () => segment?.polyline ? polylineDecoder.decode(segment.polyline) as [number, number][] : null,
+    [segment?.polyline],
+  )
+  const mapBounds = useMemo(() => decodedPath ? L.latLngBounds(decodedPath) : null, [decodedPath])
+
+  // Cumulative distances (metres) along the decoded polyline
+  const cumPathDists = useMemo(() => {
+    if (!decodedPath || decodedPath.length < 2) return [] as number[]
+    const d: number[] = [0]
+    for (let i = 1; i < decodedPath.length; i++) {
+      d.push(d[i - 1] + haversineKm(decodedPath[i - 1][0], decodedPath[i - 1][1], decodedPath[i][0], decodedPath[i][1]) * 1000)
+    }
+    return d
+  }, [decodedPath])
+
+  const [hoverDistanceM, setHoverDistanceM] = useState<number | null>(null)
+
+  // Lat/lng on the path that corresponds to the current hover distance
+  const hoverLatLng = useMemo((): [number, number] | null => {
+    if (hoverDistanceM == null || !decodedPath || cumPathDists.length < 2) return null
+    const maxD = cumPathDists[cumPathDists.length - 1]
+    const d = Math.max(0, Math.min(hoverDistanceM, maxD))
+    for (let i = 1; i < cumPathDists.length; i++) {
+      if (cumPathDists[i] >= d) {
+        const t = (d - cumPathDists[i - 1]) / (cumPathDists[i] - cumPathDists[i - 1]) || 0
+        return [
+          decodedPath[i - 1][0] + t * (decodedPath[i][0] - decodedPath[i - 1][0]),
+          decodedPath[i - 1][1] + t * (decodedPath[i][1] - decodedPath[i - 1][1]),
+        ]
+      }
+    }
+    return decodedPath[decodedPath.length - 1]
+  }, [hoverDistanceM, decodedPath, cumPathDists])
+
+  // Map polyline hover → find nearest path point → set hover distance
+  const handlePolylineMouseMove = useCallback((e: L.LeafletMouseEvent) => {
+    if (!decodedPath || cumPathDists.length < 2) return
+    const { lat, lng } = e.latlng
+    let best = Infinity, bestDist = 0
+    for (let i = 0; i < decodedPath.length; i++) {
+      const d2 = (decodedPath[i][0] - lat) ** 2 + (decodedPath[i][1] - lng) ** 2
+      if (d2 < best) { best = d2; bestDist = cumPathDists[i] }
+    }
+    setHoverDistanceM(bestDist)
+  }, [decodedPath, cumPathDists])
 
   if (!segment) {
     return (
@@ -123,9 +182,6 @@ export default function SegmentDetailPage() {
       </div>
     )
   }
-
-  const decodedPath = segment.polyline ? polylineDecoder.decode(segment.polyline) as [number, number][] : null
-  const mapBounds = decodedPath ? L.latLngBounds(decodedPath) : null
 
   const haversineM = segment.startLatlng && userLat != null && userLng != null
     ? haversineKm(userLat, userLng, segment.startLatlng[0], segment.startLatlng[1]) * 1000
@@ -188,6 +244,25 @@ export default function SegmentDetailPage() {
             )}
           </div>
 
+          {elevationLoading ? (
+            <div className="bg-gray-800/60 rounded-xl p-3 animate-pulse">
+              <div className="h-3 w-24 bg-gray-700 rounded mb-3" />
+              <div className="h-3 w-40 bg-gray-700 rounded mb-2" />
+              <div className="h-[88px] bg-gray-700 rounded-lg" />
+            </div>
+          ) : elevation ? (
+            <div className="bg-gray-800/60 rounded-xl p-3">
+              <p className="text-xs font-semibold text-gray-400 mb-2">Elevation</p>
+              <ElevationChart
+                altitude={elevation.altitude}
+                distance={elevation.distance}
+                unit={unit}
+                hoverDistanceM={hoverDistanceM}
+                onHoverDistance={setHoverDistanceM}
+              />
+            </div>
+          ) : null}
+
           {starError && (
             <div className="flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-3 py-2">
               <p className="text-xs text-red-400">{starError}</p>
@@ -230,7 +305,21 @@ export default function SegmentDetailPage() {
             <div className="rounded-xl overflow-hidden relative mx-4 my-4 md:mx-0 md:my-0 md:rounded-none h-60 md:h-full">
               <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" />
-                <Polyline positions={decodedPath} color="#FC5200" weight={4} />
+                {/* Invisible wider hit area for easier hover */}
+                <Polyline
+                  positions={decodedPath}
+                  pathOptions={{ color: '#FC5200', opacity: 0, weight: 20 }}
+                  eventHandlers={{ mousemove: handlePolylineMouseMove, mouseout: () => setHoverDistanceM(null) }}
+                />
+                <Polyline positions={decodedPath} color="#FC5200" weight={4} interactive={false} />
+                {hoverLatLng && (
+                  <CircleMarker
+                    center={hoverLatLng}
+                    radius={5}
+                    pathOptions={{ color: '#fff', fillColor: '#60a5fa', fillOpacity: 1, weight: 2 }}
+                    interactive={false}
+                  />
+                )}
                 {segment.startLatlng && (
                   <CircleMarker center={segment.startLatlng} radius={6} pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1 }} />
                 )}
