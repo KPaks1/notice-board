@@ -20,9 +20,10 @@ interface Props {
   userLat: number
   userLng: number
   roadDistance?: number
+  onHover?: (id: number | null) => void
 }
 
-export default function SegmentCard({ segment, unit, userLat, userLng, roadDistance }: Props) {
+export default function SegmentCard({ segment, unit, userLat, userLng, roadDistance, onHover }: Props) {
   const needTime = Math.max(0, segment.targetTime - 1)
 
   const haversineM = segment.startLatlng
@@ -36,6 +37,8 @@ export default function SegmentCard({ segment, unit, userLat, userLng, roadDista
       to={`/segment/${segment.id}`}
       state={{ segment, unit, userLat, userLng }}
       className="block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors"
+      onMouseEnter={() => onHover?.(segment.id)}
+      onMouseLeave={() => onHover?.(null)}
     >
       {segment.polyline && (
         <div className="rounded-t-xl overflow-hidden">

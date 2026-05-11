@@ -1,12 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap } from 'react-leaflet'
+import L from 'leaflet'
 import type { ScoredSegment } from '../types'
 
 interface Props {
   segments: ScoredSegment[]
   userLat: number
   userLng: number
+  hoveredSegmentId?: number | null
   onSegmentClick: (id: number) => void
+  onSegmentHover?: (id: number | null) => void
 }
 
 function markerColor(score: number): string {
@@ -37,7 +40,51 @@ function MapInvalidator() {
   return null
 }
 
-export default function SegmentsMap({ segments, userLat, userLng, onSegmentClick }: Props) {
+function SegmentMarker({ seg, hovered, onSegmentClick, onSegmentHover }: { seg: ScoredSegment; hovered: boolean; onSegmentClick: (id: number) => void; onSegmentHover?: (id: number | null) => void }) {
+  const markerRef = useRef<L.CircleMarker | null>(null)
+
+  useEffect(() => {
+    const m = markerRef.current
+    if (!m) return
+    if (hovered) m.openPopup()
+    else m.closePopup()
+  }, [hovered])
+
+  return (
+    <CircleMarker
+      ref={markerRef}
+      center={[seg.midpointLat, seg.midpointLng]}
+      radius={hovered ? 12 : 9}
+      pathOptions={{
+        color: hovered ? '#ffffff' : markerColor(seg.score),
+        fillColor: markerColor(seg.score),
+        fillOpacity: hovered ? 1 : 0.85,
+        weight: hovered ? 3 : 2,
+      }}
+    >
+      <Popup>
+        <div
+          style={{ minWidth: '140px' }}
+          onMouseEnter={() => onSegmentHover?.(seg.id)}
+          onMouseLeave={() => onSegmentHover?.(null)}
+        >
+          <p style={{ fontWeight: 600, marginBottom: '4px' }}>{seg.name}</p>
+          <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>
+            {(seg.distance / 1000).toFixed(1)} km · {badgeText(seg.score)}
+          </p>
+          <button
+            onClick={() => onSegmentClick(seg.id)}
+            style={{ fontSize: '12px', color: '#FC5200', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            View details →
+          </button>
+        </div>
+      </Popup>
+    </CircleMarker>
+  )
+}
+
+export default function SegmentsMap({ segments, userLat, userLng, hoveredSegmentId, onSegmentClick, onSegmentHover }: Props) {
   return (
     <MapContainer
       key={`${userLat},${userLng}`}
@@ -52,27 +99,13 @@ export default function SegmentsMap({ segments, userLat, userLng, onSegmentClick
       <MapInvalidator />
       <Marker position={[userLat, userLng]} />
       {segments.map((seg) => (
-        <CircleMarker
+        <SegmentMarker
           key={seg.id}
-          center={[seg.midpointLat, seg.midpointLng]}
-          radius={9}
-          pathOptions={{ color: markerColor(seg.score), fillColor: markerColor(seg.score), fillOpacity: 0.85, weight: 2 }}
-        >
-          <Popup>
-            <div style={{ minWidth: '140px' }}>
-              <p style={{ fontWeight: 600, marginBottom: '4px' }}>{seg.name}</p>
-              <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>
-                {(seg.distance / 1000).toFixed(1)} km · {badgeText(seg.score)}
-              </p>
-              <button
-                onClick={() => onSegmentClick(seg.id)}
-                style={{ fontSize: '12px', color: '#FC5200', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                View details →
-              </button>
-            </div>
-          </Popup>
-        </CircleMarker>
+          seg={seg}
+          hovered={hoveredSegmentId === seg.id}
+          onSegmentClick={onSegmentClick}
+          onSegmentHover={onSegmentHover}
+        />
       ))}
     </MapContainer>
   )

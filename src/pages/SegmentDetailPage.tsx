@@ -140,8 +140,8 @@ export default function SegmentDetailPage() {
     : null
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto lg:max-w-none lg:h-screen lg:overflow-hidden">
-      <header className="flex items-center gap-2 px-4 pt-6 pb-4 lg:px-6 lg:shrink-0 lg:border-b lg:border-gray-800">
+    <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto sm:rounded-2xl sm:overflow-hidden sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10 md:max-w-none md:rounded-none md:shadow-none md:ring-0 md:h-screen md:overflow-hidden">
+      <header className="flex items-center gap-2 px-4 pt-6 pb-4 md:px-6 md:shrink-0 md:border-b md:border-gray-800">
         <button
           onClick={() => navigate(-1)}
           className="p-1 -ml-1 rounded-lg text-gray-400 hover:text-white transition-colors"
@@ -167,10 +167,10 @@ export default function SegmentDetailPage() {
       </header>
 
       {/* Two-column on desktop, single column on mobile */}
-      <div className="flex-1 min-h-0 lg:flex lg:overflow-hidden">
+      <div className="flex-1 min-h-0 md:flex md:overflow-hidden">
 
         {/* Left: info panel */}
-        <div className="px-4 pb-4 overflow-y-auto no-scrollbar space-y-5 lg:w-[420px] lg:shrink-0 lg:border-r lg:border-gray-800 lg:py-6 lg:px-6">
+        <div className="px-4 pb-4 overflow-y-auto no-scrollbar space-y-5 md:w-[420px] md:shrink-0 md:border-r md:border-gray-800 md:py-6 md:px-6">
           <div className="text-xs text-gray-500">
             {formatDistance(segment.distance, unit)}
             {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
@@ -225,9 +225,9 @@ export default function SegmentDetailPage() {
         </div>
 
         {/* Right: map panel — 240px on mobile, full height on desktop */}
-        <div ref={mapPanelRef} className="relative lg:flex-1 lg:min-w-0">
+        <div ref={mapPanelRef} className="relative md:flex-1 md:min-w-0">
           {decodedPath && mapBounds ? (
-            <div className="rounded-xl overflow-hidden relative mx-4 my-4 lg:mx-0 lg:my-0 lg:rounded-none h-60 lg:h-full">
+            <div className="rounded-xl overflow-hidden relative mx-4 my-4 md:mx-0 md:my-0 md:rounded-none h-60 md:h-full">
               <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" />
                 <Polyline positions={decodedPath} color="#FC5200" weight={4} />
@@ -263,7 +263,7 @@ export default function SegmentDetailPage() {
             </div>
           ) : (
             <div
-              className="rounded-xl bg-gray-800 flex items-center justify-center text-gray-500 text-xs mx-4 my-4 lg:mx-0 lg:my-0 lg:rounded-none lg:h-full"
+              className="rounded-xl bg-gray-800 flex items-center justify-center text-gray-500 text-xs mx-4 my-4 md:mx-0 md:my-0 md:rounded-none md:h-full"
               style={{ height: '120px' }}
             >
               Route unavailable

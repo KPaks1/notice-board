@@ -52,7 +52,7 @@ function StravaGuard({ children }: { children: (status: StravaStatus) => React.R
   }, [retrying])
 
   if (loading || retrying) return <LoadingScreen retrying={retrying} />
-  if (!status?.connected) return <Navigate to="/connect-strava" replace />
+  if (!status?.connected) return <ConnectStrava />
   return <>{children(status!)}</>
 }
 
@@ -142,12 +142,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
-        <Routes>
-          <Route path="/connect-strava" element={<ConnectStrava />} />
-          <Route path="/" element={<StravaGuard>{(status) => <OnboardingGate status={status} />}</StravaGuard>} />
-          <Route path="/segment/:id" element={<StravaGuard>{() => <SegmentDetailPage />}</StravaGuard>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <StravaGuard>
+          {(status) => (
+            <Routes>
+              <Route path="/" element={<OnboardingGate status={status} />} />
+              <Route path="/segment/:id" element={<SegmentDetailPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          )}
+        </StravaGuard>
       </ErrorBoundary>
     </BrowserRouter>
   )

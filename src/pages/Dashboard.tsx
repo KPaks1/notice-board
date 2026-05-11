@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUp, List, Map, RefreshCw } from 'lucide-react'
 import { useLocation } from '../hooks/useLocation'
@@ -54,6 +54,16 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const listRef = useRef<HTMLDivElement>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [roadDistances, setRoadDistances] = useState<Record<number, number>>({})
+  const [hoveredSegmentId, setHoveredSegmentId] = useState<number | null>(null)
+  const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleHoverSegment = useCallback((id: number | null) => {
+    if (hoverClearTimer.current) clearTimeout(hoverClearTimer.current)
+    if (id !== null) {
+      setHoveredSegmentId(id)
+    } else {
+      hoverClearTimer.current = setTimeout(() => setHoveredSegmentId(null), 400)
+    }
+  }, [])
 
   useEffect(() => {
     const el = listRef.current
@@ -131,8 +141,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     })
 
   return (
-    <div className="h-screen bg-gray-950 flex flex-col max-w-lg mx-auto lg:max-w-none">
-      <header className="relative flex items-center justify-between px-4 pt-6 pb-4 lg:px-6 lg:pt-4 lg:pb-3 lg:border-b lg:border-gray-800 shrink-0">
+    <div className="h-screen bg-gray-950 flex flex-col max-w-lg mx-auto sm:rounded-2xl sm:overflow-hidden sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10 md:max-w-none md:rounded-none md:shadow-none md:ring-0">
+      <header className="relative flex items-center justify-between px-4 pt-6 pb-4 md:px-6 md:pt-4 md:pb-3 md:border-b md:border-gray-800 shrink-0">
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
           {coords && (
@@ -144,7 +154,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         </div>
 
         {/* Desktop inline nav — absolutely centered so it doesn't shift when right-side controls appear/disappear */}
-        <nav className="hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+        <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           <DesktopTabButton active={tab === 'evictions'} onClick={() => setTab('evictions')} label="Evictions" />
           <DesktopTabButton active={tab === 'settings'}  onClick={() => setTab('settings')}  label="Settings"  />
           <DesktopTabButton active={tab === 'profile'}   onClick={() => setTab('profile')}   label="Profile"   />
@@ -154,7 +164,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           <div className="flex items-center gap-1">
             <button
               onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-              className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              className="md:hidden p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
               aria-label={viewMode === 'list' ? 'Switch to map' : 'Switch to list'}
             >
               {viewMode === 'list' ? <Map size={18} /> : <List size={18} />}
@@ -179,11 +189,11 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           ref={listRef}
           className={[
             tab === 'evictions' && viewMode === 'list' ? 'flex-1 overflow-y-auto no-scrollbar' : 'hidden',
-            tab === 'evictions' ? 'lg:block lg:flex-none' : 'lg:hidden',
-            'lg:w-96 lg:shrink-0 lg:border-r lg:border-gray-800 lg:overflow-y-auto lg:no-scrollbar',
+            tab === 'evictions' ? 'md:block md:flex-none' : 'md:hidden',
+            'md:w-96 md:shrink-0 md:border-r md:border-gray-800 md:overflow-y-auto md:no-scrollbar',
           ].join(' ')}
         >
-          <div className="px-4 pb-28 lg:px-4 lg:pb-4 lg:pt-4">
+          <div className="px-4 pb-28 md:px-4 md:pb-4 md:pt-4">
             <div className="flex gap-1 mb-2">
               {(['hunt', 'harvest'] as const).map((m) => (
                 <button
@@ -224,6 +234,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
               userLat={coords?.lat ?? 0}
               userLng={coords?.lng ?? 0}
               roadDistances={roadDistances}
+              onHoverSegment={handleHoverSegment}
             />
           </div>
         </div>
@@ -231,14 +242,16 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         {/* Map panel */}
         <div className={[
           tab === 'evictions' && viewMode === 'map' ? 'flex-1 overflow-hidden pb-14' : 'hidden',
-          tab === 'evictions' ? 'lg:flex lg:flex-1 lg:pb-0' : 'lg:hidden',
+          tab === 'evictions' ? 'md:flex md:flex-1 md:pb-0' : 'md:hidden',
         ].join(' ')}>
           {coords ? (
             <SegmentsMap
               segments={segments}
               userLat={coords.lat}
               userLng={coords.lng}
+              hoveredSegmentId={hoveredSegmentId}
               onSegmentClick={mapClickHandler}
+              onSegmentHover={handleHoverSegment}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500 text-sm">
@@ -251,9 +264,9 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         <div className={
           tab === 'evictions'
             ? 'hidden'
-            : 'flex-1 overflow-y-auto no-scrollbar px-4 pb-28 lg:pb-8 lg:flex lg:justify-center'
+            : 'flex-1 overflow-y-auto no-scrollbar px-4 pb-28 md:pb-8 md:flex md:justify-center'
         }>
-          <div className="lg:max-w-2xl lg:w-full">
+          <div className="md:max-w-2xl md:w-full">
             <div className={tab !== 'settings' ? 'hidden' : ''}>
               <SettingsPanel
                 settings={settings}
@@ -271,13 +284,13 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
       <button
         onClick={() => listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-        className={`fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-[1002] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[1002] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         aria-label="Back to top"
       >
         <ArrowUp size={18} />
       </button>
 
-      <nav className="lg:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 z-[1001]">
+      <nav className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 z-[1001]">
         <div className="flex justify-center pt-1">
           <img src={poweredByStrava} alt="Powered by Strava" className="h-4 opacity-60" />
         </div>
