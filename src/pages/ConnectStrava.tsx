@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
+import stravaBtn from '../assets/strava/connect-with/btn_strava_connect_with_orange_x2.svg'
 
 const ERROR_MESSAGES: Record<string, string> = {
   denied: 'Strava authorisation was denied or failed. Please try again.',
@@ -25,12 +26,8 @@ export default function ConnectStrava() {
           <li className="flex gap-2"><span className="text-green-400">✓</span> Read nearby segment leaderboards</li>
           <li className="flex gap-2"><span className="text-green-400">✓</span> Check your personal records on segments</li>
         </ul>
-        <a
-          href="/api/strava-auth"
-          className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-xl bg-orange-500 text-white font-medium hover:bg-orange-400 transition-colors"
-        >
-          <StravaIcon />
-          Connect with Strava
+        <a href="/api/strava-auth">
+          <img src={stravaBtn} alt="Connect with Strava" className="w-full" />
         </a>
         {errorMessage && (
           <p className="mt-4 text-xs text-red-400">{errorMessage}</p>
@@ -40,10 +37,3 @@ export default function ConnectStrava() {
   )
 }
 
-function StravaIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
-    </svg>
-  )
-}

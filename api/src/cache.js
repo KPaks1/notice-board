@@ -13,3 +13,7 @@ export function cacheGet(key) {
 export function cacheSet(key, value, ttlSeconds) {
   store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
 }
+
+export function cacheDelete(key) {
+  store.delete(key)
+}

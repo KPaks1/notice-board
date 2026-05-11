@@ -104,7 +104,7 @@ export default function SegmentDetailPage() {
         <p className="text-gray-400 text-sm text-center">Open a segment from the list to see its details.</p>
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-1 text-orange-400 text-sm"
+          className="flex items-center gap-1 text-strava text-sm"
         >
           <ChevronLeft size={16} /> Back to list
         </button>
@@ -171,7 +171,7 @@ export default function SegmentDetailPage() {
             {starError.includes('reconnect') && (
               <button
                 onClick={() => { clearToken(); navigate('/connect-strava', { replace: true }) }}
-                className="text-xs text-orange-400 hover:text-orange-300 shrink-0"
+                className="text-xs text-strava hover:text-strava-light shrink-0"
               >
                 Reconnect
               </button>
@@ -183,7 +183,7 @@ export default function SegmentDetailPage() {
           <div className="rounded-xl overflow-hidden relative" style={{ height: '240px' }}>
             <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
               <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" />
-              <Polyline positions={decodedPath} color="#f97316" weight={4} />
+              <Polyline positions={decodedPath} color="#FC5200" weight={4} />
               {segment.startLatlng && (
                 <CircleMarker center={segment.startLatlng} radius={6} pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1 }} />
               )}
@@ -242,9 +242,9 @@ export default function SegmentDetailPage() {
             href={`https://www.strava.com/segments/${segment.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors"
+            className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-strava text-white text-sm font-semibold hover:bg-strava-dark transition-colors"
           >
-            Strava <ExternalLink size={15} />
+            View on Strava <ExternalLink size={15} />
           </a>
         </div>
       </div>

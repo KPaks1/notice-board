@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import type { Settings, ActivityType, TargetType } from '../types'
 import { formatRadius, formatKm } from '../format'
 
 interface Props {
   settings: Settings
   onChange: (s: Settings) => void
+  onResetPool: () => Promise<void>
+  segmentDistanceRange: { min: number; max: number } | null
 }
 
 const TARGET_OPTIONS: { value: TargetType; label: string }[] = [
@@ -16,8 +19,24 @@ const ACTIVITY_OPTIONS: { value: ActivityType; label: string }[] = [
   { value: 'cycling', label: 'Cycling' },
 ]
 
-export default function SettingsPanel({ settings, onChange }: Props) {
+export default function SettingsPanel({ settings, onChange, onResetPool, segmentDistanceRange }: Props) {
+  const distMin = segmentDistanceRange?.min ?? 0
+  const distMax = segmentDistanceRange?.max ?? 50
   const u = settings.unit
+  const [resetting, setResetting] = useState(false)
+  const [resetDone, setResetDone] = useState(false)
+
+  async function handleReset() {
+    setResetting(true)
+    setResetDone(false)
+    try {
+      await onResetPool()
+      setResetDone(true)
+      setTimeout(() => setResetDone(false), 3000)
+    } finally {
+      setResetting(false)
+    }
+  }
 
   return (
     <div className="space-y-8 py-2">
@@ -29,7 +48,7 @@ export default function SettingsPanel({ settings, onChange }: Props) {
               key={unit}
               onClick={() => onChange({ ...settings, unit })}
               className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-                u === unit ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                u === unit ? 'bg-strava text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
               }`}
             >
               {unit === 'km' ? 'Kilometres' : 'Miles'}
@@ -41,7 +60,7 @@ export default function SettingsPanel({ settings, onChange }: Props) {
       <div>
         <label className="block text-sm font-semibold text-white mb-3">
           Search Radius
-          <span className="ml-2 font-normal text-orange-400">{formatRadius(settings.radiusKm, u)}</span>
+          <span className="ml-2 font-normal text-strava">{formatRadius(settings.radiusKm, u)}</span>
         </label>
         <input
           type="range"
@@ -50,7 +69,7 @@ export default function SettingsPanel({ settings, onChange }: Props) {
           step={0.5}
           value={settings.radiusKm}
           onChange={(e) => onChange({ ...settings, radiusKm: Number(e.target.value) })}
-          className="w-full accent-orange-500"
+          className="w-full accent-strava"
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>{formatRadius(0.5, u)}</span>
@@ -61,8 +80,8 @@ export default function SettingsPanel({ settings, onChange }: Props) {
       <div>
         <label className="block text-sm font-semibold text-white mb-3">
           Segment Distance
-          <span className="ml-2 font-normal text-orange-400">
-            {settings.minSegmentKm === 0 ? 'Any' : formatKm(settings.minSegmentKm, u)}
+          <span className="ml-2 font-normal text-strava">
+            {settings.minSegmentKm <= distMin ? 'Any' : formatKm(settings.minSegmentKm, u)}
             {' — '}
             {formatKm(settings.maxSegmentKm, u)}
           </span>
@@ -75,12 +94,12 @@ export default function SettingsPanel({ settings, onChange }: Props) {
             </div>
             <input
               type="range"
-              min={0}
+              min={distMin}
               max={settings.maxSegmentKm}
               step={0.5}
-              value={settings.minSegmentKm}
+              value={Math.max(settings.minSegmentKm, distMin)}
               onChange={(e) => onChange({ ...settings, minSegmentKm: Number(e.target.value) })}
-              className="w-full accent-orange-500"
+              className="w-full accent-strava"
             />
           </div>
           <div>
@@ -91,11 +110,11 @@ export default function SettingsPanel({ settings, onChange }: Props) {
             <input
               type="range"
               min={settings.minSegmentKm}
-              max={50}
+              max={distMax}
               step={0.5}
-              value={settings.maxSegmentKm}
+              value={Math.min(settings.maxSegmentKm, distMax)}
               onChange={(e) => onChange({ ...settings, maxSegmentKm: Number(e.target.value) })}
-              className="w-full accent-orange-500"
+              className="w-full accent-strava"
             />
           </div>
         </div>
@@ -113,7 +132,7 @@ export default function SettingsPanel({ settings, onChange }: Props) {
                   value={opt.value}
                   checked={settings.activityType === opt.value}
                   onChange={() => onChange({ ...settings, activityType: opt.value })}
-                  className="accent-orange-500"
+                  className="accent-strava"
                 />
                 <span className="text-sm text-gray-300">{opt.label}</span>
               </label>
@@ -132,7 +151,7 @@ export default function SettingsPanel({ settings, onChange }: Props) {
                   value={opt.value}
                   checked={settings.targetType === opt.value}
                   onChange={() => onChange({ ...settings, targetType: opt.value })}
-                  className="accent-orange-500"
+                  className="accent-strava"
                 />
                 <span className="text-sm text-gray-300">{opt.label}</span>
               </label>
@@ -141,10 +160,17 @@ export default function SettingsPanel({ settings, onChange }: Props) {
         </div>
       </div>
 
-      <div className="pt-2 border-t border-gray-800">
+      <div className="pt-2 border-t border-gray-800 space-y-3">
         <p className="text-xs text-gray-500">
           Settings are saved locally and applied on the next search.
         </p>
+        <button
+          onClick={handleReset}
+          disabled={resetting}
+          className="text-xs text-red-400 hover:text-red-300 disabled:opacity-40 transition-colors"
+        >
+          {resetting ? 'Resetting…' : resetDone ? 'Done — segments will refresh' : 'Reset segment pool'}
+        </button>
       </div>
     </div>
   )

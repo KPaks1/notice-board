@@ -46,7 +46,7 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
         <p className="text-gray-400 text-sm mb-4">{error}</p>
         <button
           onClick={onRefresh}
-          className="text-sm text-orange-400 hover:text-orange-300 underline"
+          className="text-sm text-strava hover:text-strava-light underline"
         >
           Try again
         </button>

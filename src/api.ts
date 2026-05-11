@@ -44,6 +44,17 @@ export async function fetchSegments(
   return res.json()
 }
 
+export async function resetSegmentPool(activityType: string): Promise<void> {
+  const res = await fetch(`/api/segment-pool?activityType=${activityType}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error ?? 'Failed to reset segment pool')
+  }
+}
+
 export async function starSegment(id: number, starred: boolean): Promise<void> {
   const res = await fetch(`/api/segment-star?id=${id}`, {
     method: 'PUT',
@@ -68,6 +79,9 @@ export async function refreshAthleteEfforts(): Promise<BestEffortsResponse> {
     method: 'POST',
     headers: authHeaders(),
   })
-  if (!res.ok) throw new Error('Failed to refresh athlete efforts')
+  if (!res.ok) {
+    const err = Object.assign(new Error('Failed to refresh athlete efforts'), { status: res.status })
+    throw err
+  }
   return res.json()
 }

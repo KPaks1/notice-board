@@ -6,15 +6,17 @@ export async function translateToEnglish(text) {
   if (!key || !region || !text) return null
 
   try {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': key,
-        'Ocp-Apim-Subscription-Region': region,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify([{ text }]),
-    })
+    // const res = await fetch(ENDPOINT, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Ocp-Apim-Subscription-Key': key,
+    //     'Ocp-Apim-Subscription-Region': region,
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify([{ text }]),
+    // })
+    return null;
+
     if (!res.ok) return null
     const data = await res.json()
     const detected = data?.[0]?.detectedLanguage?.language

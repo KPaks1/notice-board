@@ -84,7 +84,7 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
           <button
             onClick={handleComputeEfforts}
             disabled={effortsLoading}
-            className="text-xs text-orange-400 hover:text-orange-300 disabled:opacity-50"
+            className="text-xs text-strava hover:text-strava-light disabled:opacity-50"
           >
             {effortsLoading ? 'Computing…' : efforts?.computed ? 'Refresh' : 'Compute'}
           </button>

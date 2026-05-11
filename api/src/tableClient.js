@@ -1,4 +1,17 @@
 import { TableClient } from '@azure/data-tables'
+import { gzipSync, gunzipSync } from 'zlib'
+
+function compress(obj) {
+  return gzipSync(JSON.stringify(obj)).toString('base64')
+}
+
+function decompress(str) {
+  try {
+    return JSON.parse(gunzipSync(Buffer.from(str, 'base64')).toString())
+  } catch {
+    return JSON.parse(str) // legacy uncompressed data
+  }
+}
 
 const TABLE_NAME = 'StravaTokens'
 
@@ -16,6 +29,15 @@ async function getClientReady() {
   return client
 }
 
+export async function listAthleteIds() {
+  const client = getClient()
+  const ids = []
+  for await (const entity of client.listEntities({ queryOptions: { filter: "PartitionKey eq 'tokens'" } })) {
+    ids.push(entity.rowKey)
+  }
+  return ids
+}
+
 export async function getToken(userId) {
   const client = getClient()
   try {
@@ -30,7 +52,7 @@ export async function getToken(userId) {
       athletePhoto: entity.athletePhoto ?? null,
       bestEfforts: entity.bestEfforts ? JSON.parse(entity.bestEfforts) : null,
       bestEffortsUpdatedAt: entity.bestEffortsUpdatedAt || null,
-      streamCache: entity.streamCache ? JSON.parse(entity.streamCache) : null,
+      streamCache: entity.streamCache ? decompress(entity.streamCache) : null,
       primaryActivity: entity.primaryActivity || null,
     }
   } catch (err) {
@@ -58,7 +80,7 @@ export async function saveToken(userId, {
       athletePhoto: athletePhoto ?? '',
       bestEfforts: bestEfforts != null ? JSON.stringify(bestEfforts) : '',
       bestEffortsUpdatedAt: bestEffortsUpdatedAt ?? '',
-      streamCache: streamCache != null ? JSON.stringify(streamCache) : '',
+      streamCache: streamCache != null ? compress(streamCache) : '',
       primaryActivity: primaryActivity ?? '',
     },
     'Replace',
@@ -122,7 +144,7 @@ export async function getSegmentCache(segId, athleteId) {
     const entity = await client.getEntity('segCache', `${segId}:${athleteId}`)
     if (!entity.cachedAt) return null
     if (Date.now() - new Date(entity.cachedAt).getTime() > SEGMENT_CACHE_TTL_MS) return null
-    return entity.data ? JSON.parse(entity.data) : null
+    return entity.data ? decompress(entity.data) : null
   } catch (err) {
     if (err.statusCode === 404) return null
     throw err
@@ -135,7 +157,7 @@ export async function setSegmentCache(segId, athleteId, data) {
     {
       partitionKey: 'segCache',
       rowKey: `${segId}:${athleteId}`,
-      data: JSON.stringify(data),
+      data: compress(data),
       cachedAt: new Date().toISOString(),
     },
     'Replace',
@@ -146,7 +168,7 @@ export async function getSegmentPool(athleteId, activityType) {
   const client = getClient()
   try {
     const entity = await client.getEntity('segPool', `${athleteId}:${activityType}`)
-    const segments = entity.data ? JSON.parse(entity.data) : []
+    const segments = entity.data ? decompress(entity.data) : []
     // Treat legacy pool entries (no updatedAt) as fresh so we don't re-tile immediately
     const updatedAt = entity.updatedAt
       ? new Date(entity.updatedAt).getTime()
@@ -158,13 +180,20 @@ export async function getSegmentPool(athleteId, activityType) {
   }
 }
 
+export async function deleteSegmentPool(athleteId, activityType) {
+  const client = getClient()
+  await client.deleteEntity('segPool', `${athleteId}:${activityType}`).catch((err) => {
+    if (err.statusCode !== 404) throw err
+  })
+}
+
 export async function setSegmentPool(athleteId, activityType, segments) {
   const client = await getClientReady()
   await client.upsertEntity(
     {
       partitionKey: 'segPool',
       rowKey: `${athleteId}:${activityType}`,
-      data: JSON.stringify(segments),
+      data: compress(segments),
       updatedAt: new Date().toISOString(),
     },
     'Replace',

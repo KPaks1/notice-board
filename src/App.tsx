@@ -7,6 +7,7 @@ import ConnectStrava from './pages/ConnectStrava'
 import Dashboard from './pages/Dashboard'
 import ErrorPage from './pages/ErrorPage'
 import SegmentDetailPage from './pages/SegmentDetailPage'
+import WelcomePage from './pages/WelcomePage'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
   state = { crashed: false }
@@ -58,8 +59,68 @@ function StravaGuard({ children }: { children: (status: StravaStatus) => React.R
 function LoadingScreen({ retrying = false }: { retrying?: boolean }) {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-3">
-      <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-strava border-t-transparent rounded-full animate-spin" />
       {retrying && <p className="text-xs text-gray-500">Server starting up…</p>}
+    </div>
+  )
+}
+
+
+let sessionOnboardingDone = false
+
+const EFFORT_TIMEOUT_MS = 5 * 60 * 1000  // give up after 5 minutes
+
+function OnboardingGate({ status }: { status: StravaStatus }) {
+  const alreadyDone = sessionOnboardingDone || (status.bestEffortsComputed ?? false)
+  const [started, setStarted] = useState(alreadyDone)
+  const [ready, setReady] = useState(alreadyDone)
+  const [timedOut, setTimedOut] = useState(false)
+
+  // Kick off effort computation immediately — retry until success or timeout
+  useEffect(() => {
+    if (alreadyDone) return
+    let cancelled = false
+    const deadline = Date.now() + EFFORT_TIMEOUT_MS
+
+    async function run() {
+      while (!cancelled) {
+        try {
+          await refreshAthleteEfforts()
+          if (!cancelled) { sessionOnboardingDone = true; setReady(true) }
+          return
+        } catch (err: unknown) {
+          if (Date.now() >= deadline) {
+            if (!cancelled) setTimedOut(true)
+            return
+          }
+          const isRateLimit = (err as { status?: number })?.status === 429
+          if (!cancelled) await new Promise((r) => setTimeout(r, isRateLimit ? 60_000 : 5_000))
+        }
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (timedOut) return <EffortErrorScreen />
+  if (!started) return <WelcomePage onStart={() => setStarted(true)} />
+  if (!ready) return <SetupScreen />
+  return <Dashboard stravaStatus={status} />
+}
+
+function EffortErrorScreen() {
+  return (
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <h1 className="text-xl font-bold text-white tracking-tight">Something's not right</h1>
+      <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
+        We weren't able to set up your pace profile. This is usually a temporary issue — come back in a few minutes and try again.
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="mt-2 px-5 py-2.5 bg-strava hover:bg-strava-light active:bg-strava-dark text-white text-sm font-semibold rounded-lg transition-colors"
+      >
+        Try again
+      </button>
     </div>
   )
 }
@@ -68,30 +129,13 @@ function SetupScreen() {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
       <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
-      <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-strava border-t-transparent rounded-full animate-spin" />
       <div>
         <p className="text-white font-medium text-sm">Setting up your pace profile</p>
         <p className="text-gray-500 text-xs mt-1">Analysing your last 200 activities…</p>
       </div>
     </div>
   )
-}
-
-let sessionOnboardingDone = false
-
-function OnboardingGate({ status }: { status: StravaStatus }) {
-  const alreadyDone = sessionOnboardingDone || (status.bestEffortsComputed ?? false)
-  const [ready, setReady] = useState(alreadyDone)
-
-  useEffect(() => {
-    if (ready) return
-    refreshAthleteEfforts()
-      .then(() => { sessionOnboardingDone = true; setReady(true) })
-      .catch(() => { sessionOnboardingDone = true; setReady(true) })
-  }, [])
-
-  if (!ready) return <SetupScreen />
-  return <Dashboard stravaStatus={status} />
 }
 
 export default function App() {

@@ -23,7 +23,7 @@ export default function ErrorPage() {
       <p className="text-gray-500 text-xs">Heading back home in {countdown}…</p>
       <button
         onClick={goHome}
-        className="mt-2 px-4 py-2 text-xs font-medium text-white bg-orange-500 rounded-lg"
+        className="mt-2 px-4 py-2 text-xs font-medium text-white bg-strava rounded-lg"
       >
         Go now
       </button>

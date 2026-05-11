@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  --color-strava: #FC5200;
+  --color-strava-light: #fd7034;
+  --color-strava-dark: #d44600;
+}
+
 @utility no-scrollbar {
   scrollbar-width: none;
   &::-webkit-scrollbar {

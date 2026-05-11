@@ -4,13 +4,15 @@ import { ArrowUp, List, Map, RefreshCw } from 'lucide-react'
 import { useLocation } from '../hooks/useLocation'
 import { useSegments } from '../hooks/useSegments'
 import { formatRadius } from '../format'
-import type { Settings, StravaStatus } from '../types'
+import type { Settings, ScoredSegment, SortBy, StravaStatus } from '../types'
 import { fetchRoadDistances } from '../osrm'
+import { resetSegmentPool } from '../api'
 import { haversineKm } from '../geo'
 import EvictionsList from '../components/EvictionsList'
 import SegmentsMap from '../components/SegmentsMap'
 import SettingsPanel from '../components/SettingsPanel'
 import ProfilePage from './ProfilePage'
+import poweredByStrava from '../assets/strava/powered-by/api_logo_pwrdBy_strava_horiz_white.svg'
 
 const SETTINGS_KEY = 'eviction-notice-settings'
 
@@ -22,6 +24,7 @@ function getDefaultSettings(status: StravaStatus): Settings {
     minSegmentKm: 0,
     maxSegmentKm: 10,
     mode: 'hunt',
+    sortBy: 'score',
     unit: 'km',
   }
 }
@@ -75,26 +78,44 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
   }, [settings])
 
+  const segmentDistanceRange = useMemo(() => {
+    if (allSegments.length === 0) return null
+    const distances = allSegments.map((s) => s.distance / 1000)
+    return {
+      min: Math.floor(Math.min(...distances) * 2) / 2,
+      max: Math.ceil(Math.max(...distances) * 2) / 2,
+    }
+  }, [allSegments])
+
   // Filter cached segments by radius + distance + mode — no API call
   const segments = useMemo(() => {
     if (!coords) return []
+    const distFromUser = (s: ScoredSegment) => s.startLatlng
+      ? haversineKm(coords.lat, coords.lng, s.startLatlng[0], s.startLatlng[1])
+      : haversineKm(coords.lat, coords.lng, s.midpointLat, s.midpointLng)
+
     let filtered = allSegments.filter((s) => {
       const distKm = s.distance / 1000
       return (
-        haversineKm(coords.lat, coords.lng, s.midpointLat, s.midpointLng) <= settings.radiusKm &&
+        distFromUser(s) <= settings.radiusKm &&
         distKm >= settings.minSegmentKm &&
         distKm <= settings.maxSegmentKm
       )
     })
     if (settings.mode === 'hunt') {
       filtered = filtered.filter((s) => s.score >= -0.35 && s.score <= 0.35)
-      filtered.sort((a, b) => a.score - b.score)
     } else {
       filtered = filtered.filter((s) => s.score > 0)
+    }
+    if (settings.sortBy === 'nearest') {
+      filtered.sort((a, b) => distFromUser(a) - distFromUser(b))
+    } else if (settings.sortBy === 'length') {
+      filtered.sort((a, b) => a.distance - b.distance)
+    } else {
       filtered.sort((a, b) => b.score - a.score)
     }
     return filtered
-  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.mode])
+  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.mode, settings.sortBy])
 
   const displayError = locError ?? error
   const isMapMode = tab === 'evictions' && viewMode === 'map'
@@ -137,16 +158,33 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         {tab === 'evictions' ? (
           viewMode === 'list' ? (
             <>
-              <div className="flex gap-1 mb-4">
+              <div className="flex gap-1 mb-2">
                 {(['hunt', 'harvest'] as const).map((m) => (
                   <button
                     key={m}
                     onClick={() => setSettings({ ...settings, mode: m })}
                     className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-                      settings.mode === m ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                      settings.mode === m ? 'bg-strava text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
                     }`}
                   >
                     {m === 'hunt' ? '🎯 Hunt' : '🌾 Harvest'}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1 mb-4">
+                {([
+                  { value: 'score', label: 'Beatability' },
+                  { value: 'nearest', label: 'Nearest' },
+                  { value: 'length', label: 'Length' },
+                ] as { value: SortBy; label: string }[]).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setSettings({ ...settings, sortBy: value })}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      settings.sortBy === value ? 'bg-gray-600 text-white' : 'bg-gray-800/50 text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    {label}
                   </button>
                 ))}
               </div>
@@ -179,7 +217,12 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
             </div>
           )
         ) : tab === 'settings' ? (
-          <SettingsPanel settings={settings} onChange={setSettings} />
+          <SettingsPanel
+            settings={settings}
+            onChange={setSettings}
+            onResetPool={async () => { await resetSegmentPool(settings.activityType); refresh() }}
+            segmentDistanceRange={segmentDistanceRange}
+          />
         ) : (
           <ProfilePage stravaStatus={stravaStatus} unit={settings.unit} />
         )}
@@ -193,10 +236,15 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         <ArrowUp size={18} />
       </button>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 flex z-[1001]">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 z-[1001]">
+        <div className="flex justify-center pt-1">
+          <img src={poweredByStrava} alt="Powered by Strava" className="h-4 opacity-60" />
+        </div>
+        <div className="flex">
         <TabButton active={tab === 'evictions'} onClick={() => setTab('evictions')} icon="🎯" label="Evictions" />
         <TabButton active={tab === 'settings'} onClick={() => setTab('settings')} icon="⚙️" label="Settings" />
         <TabButton active={tab === 'profile'} onClick={() => setTab('profile')} icon="👤" label="Profile" />
+        </div>
       </nav>
     </div>
   )
@@ -217,7 +265,7 @@ function TabButton({
     <button
       onClick={onClick}
       className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
-        active ? 'text-orange-400' : 'text-gray-500 hover:text-gray-300'
+        active ? 'text-strava' : 'text-gray-500 hover:text-gray-300'
       }`}
     >
       <span className="text-lg">{icon}</span>

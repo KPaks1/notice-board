@@ -200,6 +200,9 @@ app.http('segments', {
     const scored = await mapWithConcurrency(allSegments, 5, async (seg) => {
         try {
           const segKey = `seg:${seg.id}:${athleteId}`
+          const failKey = `seg:${seg.id}:${athleteId}:fail`
+          if (cacheGet(failKey)) return null                        // failed recently, don't retry yet
+
           let segDetail = cacheGet(segKey)                         // L1: in-memory
           if (!segDetail) {
             segDetail = await getSegmentCache(seg.id, athleteId)   // L2: Azure Table
@@ -207,12 +210,18 @@ app.http('segments', {
               cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // warm L1 from L2
             } else if (stravaDetailFetches < MAX_DETAIL_FETCHES) {
               stravaDetailFetches++
-              segDetail = await stravaGet(`/segments/${seg.id}`, accessToken)
-              segDetail.translatedName = await translateToEnglish(segDetail.name)
-              cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // write L1
-              setSegmentCache(seg.id, athleteId, segDetail)         // write L2 (background)
+              try {
+                segDetail = await stravaGet(`/segments/${seg.id}`, accessToken)
+                segDetail.translatedName = await translateToEnglish(segDetail.name)
+                cacheSet(segKey, segDetail, TTL_LEADERBOARD)        // write L1
+                setSegmentCache(seg.id, athleteId, segDetail)       // write L2 (background)
+              } catch (fetchErr) {
+                cacheSet(failKey, true, 5 * 60)                    // cooldown: skip for 5 min
+                context.warn(`Failed to score segment ${seg.id}:`, fetchErr.message)
+                return null
+              }
             } else {
-              return null                                           // skip — will score next request
+              return null                                           // cap reached — try next request
             }
           }
 
@@ -242,8 +251,12 @@ app.http('segments', {
             score = (requiredPaceSecsPerMeter - userPRPace) / requiredPaceSecsPerMeter
           }
 
-          const midpointLat = ((seg.start_latlng?.[0] ?? lat) + (seg.end_latlng?.[0] ?? lat)) / 2
-          const midpointLng = ((seg.start_latlng?.[1] ?? lng) + (seg.end_latlng?.[1] ?? lng)) / 2
+          const startLat = segDetail.start_latlng?.[0] ?? seg.start_latlng?.[0] ?? null
+          const startLng = segDetail.start_latlng?.[1] ?? seg.start_latlng?.[1] ?? null
+          const endLat = segDetail.end_latlng?.[0] ?? seg.end_latlng?.[0] ?? null
+          const endLng = segDetail.end_latlng?.[1] ?? seg.end_latlng?.[1] ?? null
+          const midpointLat = startLat != null ? (startLat + (endLat ?? startLat)) / 2 : 0
+          const midpointLng = startLng != null ? (startLng + (endLng ?? startLng)) / 2 : 0
 
           const estimatedTime = estimateTimeForDistance(effortList, segDistance)
 
@@ -264,8 +277,8 @@ app.http('segments', {
             midpointLat,
             midpointLng,
             polyline: segDetail.map?.polyline ?? null,
-            startLatlng: segDetail.start_latlng ?? null,
-            endLatlng: segDetail.end_latlng ?? null,
+            startLatlng: startLat != null && startLng != null ? [startLat, startLng] : null,
+            endLatlng: endLat != null && endLng != null ? [endLat, endLng] : null,
             starred: segDetail.starred ?? false,
           }
         } catch (err) {

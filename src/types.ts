@@ -1,6 +1,7 @@
 export type ActivityType = 'running' | 'cycling'
 export type TargetType = 'kom' | 'personal_best'
 export type SegmentMode = 'hunt' | 'harvest'
+export type SortBy = 'score' | 'nearest' | 'length'
 
 export interface Settings {
   radiusKm: number
@@ -9,6 +10,7 @@ export interface Settings {
   minSegmentKm: number
   maxSegmentKm: number
   mode: SegmentMode
+  sortBy: SortBy
   unit: 'km' | 'mile'
 }
 

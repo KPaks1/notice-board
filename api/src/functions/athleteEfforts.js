@@ -2,6 +2,7 @@ import { app } from '@azure/functions'
 import { getToken, getValidToken } from '../tableClient.js'
 import { readSession } from '../session.js'
 import { computeAndSaveBestEfforts } from './computeEfforts.js'
+import { StravaError, stravaHttpStatus } from '../stravaError.js'
 
 app.http('athleteEffortsGet', {
   methods: ['GET'],
@@ -31,7 +32,14 @@ app.http('athleteEffortsRefresh', {
     const tokenData = await getValidToken(athleteId)
     if (!tokenData) return { status: 403, jsonBody: { error: 'Strava not connected' } }
 
-    const result = await computeAndSaveBestEfforts(athleteId, tokenData.accessToken)
-    return { jsonBody: { computed: true, ...result } }
+    try {
+      const result = await computeAndSaveBestEfforts(athleteId, tokenData.accessToken)
+      return { jsonBody: { computed: true, ...result } }
+    } catch (err) {
+      if (err instanceof StravaError) {
+        return { status: stravaHttpStatus(err.status), jsonBody: { error: err.message } }
+      }
+      throw err
+    }
   },
 })
