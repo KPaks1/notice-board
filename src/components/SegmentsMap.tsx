@@ -61,6 +61,11 @@ function SegmentMarker({ seg, hovered, onSegmentClick, onSegmentHover }: { seg: 
         fillOpacity: hovered ? 1 : 0.85,
         weight: hovered ? 3 : 2,
       }}
+      eventHandlers={{
+        mouseover: () => onSegmentHover?.(seg.id),
+        mouseout: () => onSegmentHover?.(null),
+        click: () => markerRef.current?.openPopup(),
+      }}
     >
       <Popup>
         <div
