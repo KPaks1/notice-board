@@ -179,12 +179,15 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       <header className="relative flex items-center justify-between px-4 pt-6 pb-4 md:px-6 md:pt-4 md:pb-3 md:border-b md:border-gray-800 shrink-0">
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
-          {coords && (
-            <p className="text-xs text-gray-500 mt-0.5">
-              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {formatRadius(settings.radiusKm, settings.unit)}
-            </p>
-          )}
-          {locError && <p className="text-xs text-red-400 mt-0.5">{locError}</p>}
+          <div className="flex items-center gap-2 mt-0.5">
+            {coords && (
+              <p className="text-xs text-gray-500">
+                {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {formatRadius(settings.radiusKm, settings.unit)}
+              </p>
+            )}
+            {locError && <p className="text-xs text-red-400">{locError}</p>}
+            <img src={poweredByStrava} alt="Powered by Strava" className="h-3 opacity-40" />
+          </div>
         </div>
 
         {/* Desktop inline nav — absolutely centered so it doesn't shift when right-side controls appear/disappear */}
@@ -288,7 +291,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
               onSegmentHover={handleHoverSegment}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+            <div className="flex flex-1 items-center justify-center text-gray-500 text-sm">
               Waiting for location…
             </div>
           )}
@@ -327,9 +330,6 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       </button>
 
       <nav className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 z-[1001]">
-        <div className="flex justify-center pt-1">
-          <img src={poweredByStrava} alt="Powered by Strava" className="h-4 opacity-60" />
-        </div>
         <div className="flex">
           <TabButton active={tab === 'evictions'} onClick={() => setTab('evictions')} icon="🎯" label="Evictions" />
           <TabButton active={tab === 'settings'}  onClick={() => setTab('settings')}  icon="⚙️" label="Settings"  />
