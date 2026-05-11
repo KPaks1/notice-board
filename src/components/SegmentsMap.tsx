@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, CircleMarker, Marker, Popup } from 'react-leaflet'
+import { useEffect } from 'react'
+import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap } from 'react-leaflet'
 import type { ScoredSegment } from '../types'
 
 interface Props {
@@ -20,6 +21,22 @@ function badgeText(score: number): string {
   return 'TOUGH'
 }
 
+// Calls invalidateSize when the map container is revealed after being hidden (display:none).
+function MapInvalidator() {
+  const map = useMap()
+  useEffect(() => {
+    const container = map.getContainer()
+    const ro = new ResizeObserver(() => {
+      if (container.offsetWidth > 0 || container.offsetHeight > 0) {
+        map.invalidateSize()
+      }
+    })
+    ro.observe(container)
+    return () => ro.disconnect()
+  }, [map])
+  return null
+}
+
 export default function SegmentsMap({ segments, userLat, userLng, onSegmentClick }: Props) {
   return (
     <MapContainer
@@ -32,6 +49,7 @@ export default function SegmentsMap({ segments, userLat, userLng, onSegmentClick
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
+      <MapInvalidator />
       <Marker position={[userLat, userLng]} />
       {segments.map((seg) => (
         <CircleMarker
@@ -48,7 +66,7 @@ export default function SegmentsMap({ segments, userLat, userLng, onSegmentClick
               </p>
               <button
                 onClick={() => onSegmentClick(seg.id)}
-                style={{ fontSize: '12px', color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                style={{ fontSize: '12px', color: '#FC5200', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
                 View details →
               </button>

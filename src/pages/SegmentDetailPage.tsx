@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Crosshair, ExternalLink, LocateFixed, Navigation, Star } from 'lucide-react'
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet'
@@ -46,6 +46,7 @@ export default function SegmentDetailPage() {
   const [starError, setStarError] = useState<string | null>(null)
   const [starSuccess, setStarSuccess] = useState<string | null>(null)
   const mapRef = useRef<L.Map | null>(null)
+  const mapPanelRef = useRef<HTMLDivElement>(null)
   const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -53,6 +54,17 @@ export default function SegmentDetailPage() {
     if (cooldownTimer.current) clearTimeout(cooldownTimer.current)
     if (successTimer.current) clearTimeout(successTimer.current)
   }, [])
+
+  // Invalidate Leaflet size when the map panel resizes (e.g. mobile→desktop layout shift)
+  useEffect(() => {
+    const el = mapPanelRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => mapRef.current?.invalidateSize())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const onMapReady = useCallback((m: L.Map) => { mapRef.current = m }, [])
 
   async function toggleStar() {
     if (!segment || starring || starCooldown) return
@@ -121,9 +133,15 @@ export default function SegmentDetailPage() {
   const displayDistanceM = roadDistance ?? haversineM
   const isByPlane = roadDistance == null && displayDistanceM != null
 
+  const mapsUrl = segment.startLatlng
+    ? /iPad|iPhone|iPod/.test(navigator.userAgent)
+      ? `maps://maps.apple.com/?daddr=${segment.startLatlng[0]},${segment.startLatlng[1]}`
+      : `https://www.google.com/maps/dir/?api=1&destination=${segment.startLatlng[0]},${segment.startLatlng[1]}`
+    : null
+
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto">
-      <header className="flex items-center gap-2 px-4 pt-6 pb-4">
+    <div className="min-h-screen bg-gray-950 flex flex-col max-w-lg mx-auto lg:max-w-none lg:h-screen lg:overflow-hidden">
+      <header className="flex items-center gap-2 px-4 pt-6 pb-4 lg:px-6 lg:shrink-0 lg:border-b lg:border-gray-800">
         <button
           onClick={() => navigate(-1)}
           className="p-1 -ml-1 rounded-lg text-gray-400 hover:text-white transition-colors"
@@ -148,86 +166,44 @@ export default function SegmentDetailPage() {
         <Badge score={segment.score} />
       </header>
 
-      <div className="px-4 pb-4 flex-1 overflow-y-auto space-y-5">
-        <div className="text-xs text-gray-500">
-          {formatDistance(segment.distance, unit)}
-          {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
-          {segment.city && ` · ${segment.city}`}
-          {displayDistanceM != null && <> · <DistanceToStart distanceM={displayDistanceM} isByPlane={isByPlane} unit={unit} /></>}
-        </div>
+      {/* Two-column on desktop, single column on mobile */}
+      <div className="flex-1 min-h-0 lg:flex lg:overflow-hidden">
 
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} sub={formatPace(segment.targetTime, segment.distance, unit)} />
-            <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} sub={segment.userPR ? formatPace(segment.userPR, segment.distance, unit) : undefined} />
+        {/* Left: info panel */}
+        <div className="px-4 pb-4 overflow-y-auto no-scrollbar space-y-5 lg:w-[420px] lg:shrink-0 lg:border-r lg:border-gray-800 lg:py-6 lg:px-6">
+          <div className="text-xs text-gray-500">
+            {formatDistance(segment.distance, unit)}
+            {segment.elevationGain > 0 && ` · ${Math.round(segment.elevationGain)}m climb`}
+            {segment.city && ` · ${segment.city}`}
+            {displayDistanceM != null && <> · <DistanceToStart distanceM={displayDistanceM} isByPlane={isByPlane} unit={unit} /></>}
           </div>
-          {segment.estimatedTime != null && (
-            <StatBox label="Est. best" value={formatTime(segment.estimatedTime)} sub={formatPace(segment.estimatedTime, segment.distance, unit)} />
-          )}
-        </div>
-        {starError && (
-          <div className="flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-3 py-2">
-            <p className="text-xs text-red-400">{starError}</p>
-            {starError.includes('reconnect') && (
-              <button
-                onClick={() => { clearToken(); navigate('/connect-strava', { replace: true }) }}
-                className="text-xs text-strava hover:text-strava-light shrink-0"
-              >
-                Reconnect
-              </button>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} sub={formatPace(segment.targetTime, segment.distance, unit)} />
+              <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} sub={segment.userPR ? formatPace(segment.userPR, segment.distance, unit) : undefined} />
+            </div>
+            {segment.estimatedTime != null && (
+              <StatBox label="Est. best" value={formatTime(segment.estimatedTime)} sub={formatPace(segment.estimatedTime, segment.distance, unit)} />
             )}
           </div>
-        )}
 
-        {decodedPath && mapBounds ? (
-          <div className="rounded-xl overflow-hidden relative" style={{ height: '240px' }}>
-            <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" />
-              <Polyline positions={decodedPath} color="#FC5200" weight={4} />
-              {segment.startLatlng && (
-                <CircleMarker center={segment.startLatlng} radius={6} pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1 }} />
-              )}
-              {segment.endLatlng && (
-                <CircleMarker center={segment.endLatlng} radius={6} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1 }} />
-              )}
-              {userLat != null && userLng != null && (
-                <CircleMarker center={[userLat, userLng]} radius={8} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2 }} />
-              )}
-<MapController onReady={(m) => { mapRef.current = m }} />
-            </MapContainer>
-            <div className="absolute bottom-2 right-2 z-[1000] flex flex-col gap-1">
-              <button
-                onClick={() => mapRef.current?.fitBounds(mapBounds, { padding: [20, 20] })}
-                className="p-2 rounded-lg bg-gray-900/90 text-white hover:bg-gray-800 transition-colors shadow"
-                aria-label="Recentre on segment"
-              >
-                <Crosshair size={16} />
-              </button>
-              {userLat != null && userLng != null && (
+          {starError && (
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-3 py-2">
+              <p className="text-xs text-red-400">{starError}</p>
+              {starError.includes('reconnect') && (
                 <button
-                  onClick={() => mapRef.current?.setView([userLat, userLng], 15)}
-                  className="p-2 rounded-lg bg-gray-900/90 text-blue-400 hover:bg-gray-800 transition-colors shadow"
-                  aria-label="Recentre on my location"
+                  onClick={() => { clearToken(); navigate('/connect-strava', { replace: true }) }}
+                  className="text-xs text-strava hover:text-strava-light shrink-0"
                 >
-                  <LocateFixed size={16} />
+                  Reconnect
                 </button>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="rounded-xl bg-gray-800 flex items-center justify-center text-gray-500 text-xs" style={{ height: '120px' }}>
-            Route unavailable
-          </div>
-        )}
+          )}
 
-        <div className="flex gap-2">
-          {segment.startLatlng && (() => {
-            const [lat, lng] = segment.startLatlng
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-            const mapsUrl = isIOS
-              ? `maps://maps.apple.com/?daddr=${lat},${lng}`
-              : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-            return (
+          <div className="flex gap-2">
+            {mapsUrl && (
               <a
                 href={mapsUrl}
                 target="_blank"
@@ -236,16 +212,63 @@ export default function SegmentDetailPage() {
               >
                 Directions <Navigation size={15} />
               </a>
-            )
-          })()}
-          <a
-            href={`https://www.strava.com/segments/${segment.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-strava text-white text-sm font-semibold hover:bg-strava-dark transition-colors"
-          >
-            View on Strava <ExternalLink size={15} />
-          </a>
+            )}
+            <a
+              href={`https://www.strava.com/segments/${segment.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-strava text-white text-sm font-semibold hover:bg-strava-dark transition-colors"
+            >
+              View on Strava <ExternalLink size={15} />
+            </a>
+          </div>
+        </div>
+
+        {/* Right: map panel — 240px on mobile, full height on desktop */}
+        <div ref={mapPanelRef} className="relative lg:flex-1 lg:min-w-0">
+          {decodedPath && mapBounds ? (
+            <div className="rounded-xl overflow-hidden relative mx-4 my-4 lg:mx-0 lg:my-0 lg:rounded-none h-60 lg:h-full">
+              <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" />
+                <Polyline positions={decodedPath} color="#FC5200" weight={4} />
+                {segment.startLatlng && (
+                  <CircleMarker center={segment.startLatlng} radius={6} pathOptions={{ color: '#22c55e', fillColor: '#22c55e', fillOpacity: 1 }} />
+                )}
+                {segment.endLatlng && (
+                  <CircleMarker center={segment.endLatlng} radius={6} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1 }} />
+                )}
+                {userLat != null && userLng != null && (
+                  <CircleMarker center={[userLat, userLng]} radius={8} pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.9, weight: 2 }} />
+                )}
+                <MapController onReady={onMapReady} />
+              </MapContainer>
+              <div className="absolute bottom-2 right-2 z-[1000] flex flex-col gap-1">
+                <button
+                  onClick={() => mapRef.current?.fitBounds(mapBounds, { padding: [20, 20] })}
+                  className="p-2 rounded-lg bg-gray-900/90 text-white hover:bg-gray-800 transition-colors shadow"
+                  aria-label="Recentre on segment"
+                >
+                  <Crosshair size={16} />
+                </button>
+                {userLat != null && userLng != null && (
+                  <button
+                    onClick={() => mapRef.current?.setView([userLat, userLng], 15)}
+                    className="p-2 rounded-lg bg-gray-900/90 text-blue-400 hover:bg-gray-800 transition-colors shadow"
+                    aria-label="Recentre on my location"
+                  >
+                    <LocateFixed size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="rounded-xl bg-gray-800 flex items-center justify-center text-gray-500 text-xs mx-4 my-4 lg:mx-0 lg:my-0 lg:rounded-none lg:h-full"
+              style={{ height: '120px' }}
+            >
+              Route unavailable
+            </div>
+          )}
         </div>
       </div>
 
