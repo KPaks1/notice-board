@@ -1,5 +1,4 @@
-import { useNavigate } from 'react-router-dom'
-import { clearToken } from '../api'
+import { clearToken, deauthorizeStrava } from '../api'
 import { useAthleteEfforts } from '../hooks/useAthleteEfforts'
 import { formatPace } from '../format'
 import type { Unit } from '../format'
@@ -42,12 +41,12 @@ function initials(name?: string | null): string {
 }
 
 export default function ProfilePage({ stravaStatus, unit }: Props) {
-  const navigate = useNavigate()
   const { efforts, loading: effortsLoading, error: effortsError, refresh: handleComputeEfforts } = useAthleteEfforts()
 
-  function disconnect() {
+  async function disconnect() {
+    await deauthorizeStrava()
     clearToken()
-    navigate('/connect-strava', { replace: true })
+    window.location.replace('/')
   }
 
   const sexLabel =

@@ -208,6 +208,13 @@ export async function getSegmentPool(athleteId, activityType) {
   }
 }
 
+export async function deleteToken(userId) {
+  const client = getClient()
+  await client.deleteEntity('tokens', userId).catch((err) => {
+    if (err.statusCode !== 404) throw err
+  })
+}
+
 export async function deleteSegmentPool(athleteId, activityType) {
   const client = getClient()
   await client.deleteEntity('segPool', `${athleteId}:${activityType}`).catch((err) => {

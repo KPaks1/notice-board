@@ -80,6 +80,13 @@ export async function fetchSegmentElevation(id: number): Promise<{ altitude: num
   return res.json()
 }
 
+export async function deauthorizeStrava(): Promise<void> {
+  await fetch('/api/strava-deauthorize', {
+    method: 'POST',
+    headers: authHeaders(),
+  }).catch(() => {})
+}
+
 export async function refreshAthleteEfforts(): Promise<BestEffortsResponse> {
   const res = await fetch('/api/athlete-efforts/refresh', {
     method: 'POST',
