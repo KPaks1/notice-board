@@ -14,7 +14,7 @@ app.http('publicSession', {
 
     const stored = await getToken(athleteId)
     if (!stored) {
-      return { status: 503, jsonBody: { error: 'Public athlete not connected', debug_id: athleteId, debug_len: athleteId.length } }
+      return { status: 503, jsonBody: { error: 'Public athlete not connected' } }
     }
 
     const token = createToken(athleteId)
