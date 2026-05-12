@@ -197,13 +197,14 @@ export async function getSegmentPool(athleteId, activityType) {
   try {
     const entity = await client.getEntity('segPool', `${athleteId}:${activityType}`)
     const segments = entity.data ? decompress(entity.data) : []
+    const coveredTiles = entity.coveredTiles ? decompress(entity.coveredTiles) : []
     // Treat legacy pool entries (no updatedAt) as fresh so we don't re-tile immediately
     const updatedAt = entity.updatedAt
       ? new Date(entity.updatedAt).getTime()
       : segments.length > 0 ? Date.now() : 0
-    return { segments, updatedAt }
+    return { segments, updatedAt, coveredTiles }
   } catch (err) {
-    if (err.statusCode === 404) return { segments: [], updatedAt: 0 }
+    if (err.statusCode === 404) return { segments: [], updatedAt: 0, coveredTiles: [] }
     throw err
   }
 }
@@ -222,13 +223,14 @@ export async function deleteSegmentPool(athleteId, activityType) {
   })
 }
 
-export async function setSegmentPool(athleteId, activityType, segments) {
+export async function setSegmentPool(athleteId, activityType, segments, coveredTiles = []) {
   const client = await getClientReady()
   await client.upsertEntity(
     {
       partitionKey: 'segPool',
       rowKey: `${athleteId}:${activityType}`,
       data: compress(segments),
+      coveredTiles: compress(coveredTiles),
       updatedAt: new Date().toISOString(),
     },
     'Replace',

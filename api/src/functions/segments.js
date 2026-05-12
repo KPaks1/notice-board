@@ -14,6 +14,18 @@ const TTL_STATS = 60 * 60         // athlete stats: 1 hour
 const SNAP = 0.01 // ~1km grid — keeps tile cache keys stable across minor GPS jitter
 const snapCoord = (v) => Math.round(v / SNAP) * SNAP
 
+const MAX_POOL_DISTANCE_KM = 100
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function generateTiles(lat, lng, radiusKm, cols = 5, rows = 4) {
   const latDelta = radiusKm / 111.32
   const lngDelta = latDelta / Math.cos((lat * Math.PI) / 180)
@@ -119,19 +131,24 @@ app.http('segments', {
         cacheSet(poolL1Key, poolData, TTL_EXPLORE)
       } catch (err) {
         context.warn('Could not load segment pool:', err.message)
-        poolData = { segments: [], updatedAt: 0 }
+        poolData = { segments: [], updatedAt: 0, coveredTiles: [] }
       }
     }
 
     const poolById = new Map(poolData.segments.map((s) => [s.id, s]))
     const poolAgeMs = Date.now() - poolData.updatedAt
 
-    // Only run tile queries when the pool is stale — skips 20 Strava calls on cold starts
-    if (poolAgeMs > TTL_EXPLORE * 1000) {
-      const tiles = generateTiles(snapCoord(lat), snapCoord(lng), radiusKm)
+    const tiles = generateTiles(snapCoord(lat), snapCoord(lng), radiusKm)
+    const coveredTiles = new Set(poolData.coveredTiles ?? [])
+    const poolExpired = poolAgeMs > TTL_EXPLORE * 1000
+    // Re-fetch all tiles when pool has expired; otherwise only fetch tiles not yet covered
+    const tilesToFetch = poolExpired ? tiles : tiles.filter((bbox) => !coveredTiles.has(bbox))
+
+    if (tilesToFetch.length > 0) {
       let tileRateLimitErr = null
+      const rateLimitedBboxes = new Set()
       const tileResults = await Promise.all(
-        tiles.map(async (bbox) => {
+        tilesToFetch.map(async (bbox) => {
           const tileKey = `explore:${bbox}:${activityType}`
           let segs = cacheGet(tileKey)
           if (!segs) {
@@ -145,6 +162,7 @@ app.http('segments', {
             } catch (err) {
               if (err instanceof StravaError && err.status === 429) {
                 tileRateLimitErr = err
+                rateLimitedBboxes.add(bbox)
               } else {
                 context.warn(`Tile explore failed for ${bbox}:`, err.message)
               }
@@ -163,25 +181,28 @@ app.http('segments', {
         }
       }
 
-      let poolUpdated = false
       for (const seg of tileResults.flat()) {
         if (!poolById.has(seg.id)) {
           poolById.set(seg.id, trimSeg(seg))
-          poolUpdated = true
         }
       }
-      if (poolUpdated) {
-        const updated = [...poolById.values()]
-        setSegmentPool(athleteId, activityType, updated)  // background write
-        cacheSet(poolL1Key, { segments: updated, updatedAt: Date.now() }, TTL_EXPLORE)
-      } else {
-        // Pool unchanged but still refresh the updatedAt so we don't re-tile next time
-        setSegmentPool(athleteId, activityType, poolData.segments)
-        cacheSet(poolL1Key, { segments: poolData.segments, updatedAt: Date.now() }, TTL_EXPLORE)
-      }
+
+      const newlyCovered = tilesToFetch.filter((bbox) => !rateLimitedBboxes.has(bbox))
+      const newCoveredTiles = poolExpired
+        ? newlyCovered
+        : [...coveredTiles, ...newlyCovered]
+
+      const updated = [...poolById.values()]
+      setSegmentPool(athleteId, activityType, updated, newCoveredTiles)  // background write
+      cacheSet(poolL1Key, { segments: updated, updatedAt: Date.now(), coveredTiles: newCoveredTiles }, TTL_EXPLORE)
     }
 
-    const allSegments = [...poolById.values()]
+    const allSegments = [...poolById.values()].filter((s) => {
+      const sLat = s.start_latlng?.[0]
+      const sLng = s.start_latlng?.[1]
+      if (sLat == null || sLng == null) return true
+      return haversineKm(lat, lng, sLat, sLng) <= MAX_POOL_DISTANCE_KM
+    })
     if (allSegments.length === 0) {
       return { jsonBody: [] }
     }
