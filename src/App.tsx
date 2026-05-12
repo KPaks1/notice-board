@@ -1,7 +1,7 @@
 import { Component, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { fetchStravaStatus, refreshAthleteEfforts, storeToken } from './api'
+import { fetchPublicSession, fetchStravaStatus, refreshAthleteEfforts, storeToken } from './api'
 import { APP_NAME } from './constants'
 import type { StravaStatus } from './types'
 import ConnectStrava from './pages/ConnectStrava'
@@ -42,7 +42,20 @@ function StravaGuard({ children }: { children: (status: StravaStatus) => React.R
     setLoading(true)
     setRetrying(false)
     fetchStravaStatus()
-      .then((s) => { setStatus(s); setLoading(false) })
+      .then(async (s) => {
+        if (!s.connected) {
+          try {
+            await fetchPublicSession()
+            const publicStatus = await fetchStravaStatus()
+            setStatus(publicStatus)
+          } catch {
+            setStatus(s)
+          }
+        } else {
+          setStatus(s)
+        }
+        setLoading(false)
+      })
       .catch(() => { setLoading(false); setRetrying(true) })
   }
 

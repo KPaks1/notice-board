@@ -37,6 +37,13 @@ export async function fetchStravaStatus(): Promise<StravaStatus> {
   return res.json()
 }
 
+export async function fetchPublicSession(): Promise<void> {
+  const res = await fetch('/api/public-session')
+  if (!res.ok) throw new Error('No public session available')
+  const { token } = await res.json()
+  storeToken(token)
+}
+
 export async function fetchSegments(
   lat: number,
   lng: number,

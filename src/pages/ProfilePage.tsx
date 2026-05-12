@@ -90,13 +90,15 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
       <div className="space-y-4 pt-4 border-t border-gray-800">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-300">Estimated Times</h3>
-          <button
-            onClick={handleComputeEfforts}
-            disabled={effortsLoading}
-            className="text-xs text-strava hover:text-strava-light disabled:opacity-50"
-          >
-            {effortsLoading ? 'Computing…' : efforts?.computed ? 'Refresh' : 'Compute'}
-          </button>
+          {!stravaStatus.isPublic && (
+            <button
+              onClick={handleComputeEfforts}
+              disabled={effortsLoading}
+              className="text-xs text-strava hover:text-strava-light disabled:opacity-50"
+            >
+              {effortsLoading ? 'Computing…' : efforts?.computed ? 'Refresh' : 'Compute'}
+            </button>
+          )}
         </div>
 
         {effortsError && (
@@ -137,14 +139,20 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
         )}
       </div>
 
-      <div className="pt-4 border-t border-gray-800">
-        <button
-          onClick={disconnect}
-          className="w-full py-3 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors"
-        >
-          Disconnect Strava
-        </button>
-      </div>
+      {stravaStatus.isPublic ? (
+        <div className="pt-4 border-t border-gray-800">
+          <p className="text-xs text-center text-gray-500">You're viewing a public profile.</p>
+        </div>
+      ) : (
+        <div className="pt-4 border-t border-gray-800">
+          <button
+            onClick={disconnect}
+            className="w-full py-3 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors"
+          >
+            Disconnect Strava
+          </button>
+        </div>
+      )}
     </div>
   )
 }

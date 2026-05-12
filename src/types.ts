@@ -46,6 +46,7 @@ export interface StravaStatus {
   athletePhoto?: string | null
   primaryActivity?: 'running' | 'cycling' | null
   bestEffortsComputed?: boolean
+  isPublic?: boolean
 }
 
 export interface EffortEntry {

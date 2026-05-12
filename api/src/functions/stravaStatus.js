@@ -26,6 +26,7 @@ app.http('stravaStatus', {
         athletePhoto: token.athletePhoto ?? null,
         primaryActivity: token.primaryActivity ?? null,
         bestEffortsComputed: !!token.bestEfforts,
+        isPublic: athleteId === process.env.PUBLIC_ATHLETE_ID,
       },
     }
   },
