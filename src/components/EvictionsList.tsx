@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { SegmentMode, ScoredSegment } from '../types'
 import type { Unit } from '../format'
 import SegmentCard from './SegmentCard'
@@ -30,9 +31,24 @@ interface Props {
   userLng: number
   roadDistances: Record<number, number>
   onHoverSegment?: (id: number | null) => void
+  rateLimitedUntil?: number | null
 }
 
-export default function EvictionsList({ segments, loading, error, onRefresh, mode, unit, userLat, userLng, roadDistances, onHoverSegment }: Props) {
+function useSecondsUntil(timestamp: number | null | undefined): number | null {
+  const [seconds, setSeconds] = useState<number | null>(null)
+  useEffect(() => {
+    if (!timestamp) { setSeconds(null); return }
+    const update = () => setSeconds(Math.max(Math.ceil((timestamp - Date.now()) / 1000), 0))
+    update()
+    const t = setInterval(update, 1000)
+    return () => clearInterval(t)
+  }, [timestamp])
+  return seconds
+}
+
+export default function EvictionsList({ segments, loading, error, onRefresh, mode, unit, userLat, userLng, roadDistances, onHoverSegment, rateLimitedUntil }: Props) {
+  const secondsLeft = useSecondsUntil(rateLimitedUntil)
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -42,15 +58,20 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
   }
 
   if (error) {
+    const isRateLimited = rateLimitedUntil != null
     return (
       <div className="text-center py-16">
         <p className="text-gray-400 text-sm mb-4">{error}</p>
-        <button
-          onClick={onRefresh}
-          className="text-sm text-strava hover:text-strava-light underline"
-        >
-          Try again
-        </button>
+        {isRateLimited && secondsLeft !== null && secondsLeft > 0 ? (
+          <p className="text-xs text-gray-500">Retrying automatically in {secondsLeft}s</p>
+        ) : (
+          <button
+            onClick={onRefresh}
+            className="text-sm text-strava hover:text-strava-light underline"
+          >
+            Try again
+          </button>
+        )}
       </div>
     )
   }

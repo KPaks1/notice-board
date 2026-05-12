@@ -7,9 +7,10 @@ const MESSAGES = {
 }
 
 export class StravaError extends Error {
-  constructor(status) {
+  constructor(status, retryAfter = null) {
     super(MESSAGES[status] ?? `Strava returned an unexpected error (${status}).`)
     this.status = status
+    this.retryAfter = retryAfter
   }
 }
 

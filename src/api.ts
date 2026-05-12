@@ -15,6 +15,21 @@ export function authHeaders(): Record<string, string> {
   return token ? { 'X-Session-Token': token } : {}
 }
 
+export class RateLimitError extends Error {
+  retryAfter: number
+  constructor(retryAfter = 60) {
+    super('Strava rate limit exceeded. Retrying automatically…')
+    this.name = 'RateLimitError'
+    this.retryAfter = retryAfter
+  }
+}
+
+function parseRetryAfter(res: Response): number {
+  const raw = res.headers.get('Retry-After')
+  const parsed = raw ? parseInt(raw, 10) : NaN
+  return isNaN(parsed) ? 60 : parsed
+}
+
 export async function fetchStravaStatus(): Promise<StravaStatus> {
   const res = await fetch('/api/strava-status', { headers: authHeaders() })
   if (res.status === 401) return { connected: false }
@@ -37,6 +52,7 @@ export async function fetchSegments(
     radiusKm: String(radiusKm),
   })
   const res = await fetch(`/api/segments?${params}`, { headers: authHeaders() })
+  if (res.status === 429) throw new RateLimitError(parseRetryAfter(res))
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.error ?? 'Failed to fetch segments')
@@ -80,6 +96,7 @@ export async function refreshAthleteEfforts(): Promise<BestEffortsResponse> {
     method: 'POST',
     headers: authHeaders(),
   })
+  if (res.status === 429) throw new RateLimitError(parseRetryAfter(res))
   if (!res.ok) {
     const err = Object.assign(new Error('Failed to refresh athlete efforts'), { status: res.status })
     throw err

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchSegments } from '../api'
+import { fetchSegments, RateLimitError } from '../api'
 import type { ScoredSegment } from '../types'
 
 interface Coords { lat: number; lng: number }
@@ -21,6 +21,7 @@ export function useSegments(coords: Coords | null, activityType: string, targetT
   const [allSegments, setAllSegments] = useState<ScoredSegment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
   const coordsRef = useRef(coords)
   coordsRef.current = coords
 
@@ -40,12 +41,27 @@ export function useSegments(coords: Coords | null, activityType: string, targetT
     setError(null)
     try {
       setAllSegments(await fetchSegments(c.lat, c.lng, activityType, targetType, debouncedRadiusKm))
+      setRateLimitedUntil(null)
     } catch (e) {
+      if (e instanceof RateLimitError) {
+        setRateLimitedUntil(Date.now() + e.retryAfter * 1000)
+      }
       setError(e instanceof Error ? e.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }
   }, [activityType, targetType, debouncedRadiusKm])
+
+  // Auto-retry when the rate limit window expires
+  useEffect(() => {
+    if (!rateLimitedUntil) return
+    const delay = rateLimitedUntil - Date.now()
+    const t = setTimeout(() => {
+      setRateLimitedUntil(null)
+      refresh()
+    }, Math.max(delay, 0))
+    return () => clearTimeout(t)
+  }, [rateLimitedUntil, refresh])
 
   useEffect(() => {
     if (!fetchKey) return
@@ -54,5 +70,5 @@ export function useSegments(coords: Coords | null, activityType: string, targetT
     refresh()
   }, [fetchKey, refresh, allSegments.length])
 
-  return { allSegments, loading, error, refresh }
+  return { allSegments, loading, error, refresh, rateLimitedUntil }
 }

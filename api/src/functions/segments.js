@@ -129,6 +129,7 @@ app.http('segments', {
     // Only run tile queries when the pool is stale — skips 20 Strava calls on cold starts
     if (poolAgeMs > TTL_EXPLORE * 1000) {
       const tiles = generateTiles(snapCoord(lat), snapCoord(lng), radiusKm)
+      let tileRateLimitErr = null
       const tileResults = await Promise.all(
         tiles.map(async (bbox) => {
           const tileKey = `explore:${bbox}:${activityType}`
@@ -142,13 +143,25 @@ app.http('segments', {
               segs = data.segments ?? []
               cacheSet(tileKey, segs, TTL_EXPLORE)
             } catch (err) {
-              context.warn(`Tile explore failed for ${bbox}:`, err.message)
+              if (err instanceof StravaError && err.status === 429) {
+                tileRateLimitErr = err
+              } else {
+                context.warn(`Tile explore failed for ${bbox}:`, err.message)
+              }
               segs = []
             }
           }
           return segs
         }),
       )
+
+      if (tileRateLimitErr && poolById.size === 0) {
+        return {
+          status: 429,
+          headers: { 'Retry-After': String(tileRateLimitErr.retryAfter ?? 60) },
+          jsonBody: { error: tileRateLimitErr.message },
+        }
+      }
 
       let poolUpdated = false
       for (const seg of tileResults.flat()) {

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { clearToken, deauthorizeStrava } from '../api'
 import { useAthleteEfforts } from '../hooks/useAthleteEfforts'
 import { formatPace } from '../format'
@@ -41,7 +42,16 @@ function initials(name?: string | null): string {
 }
 
 export default function ProfilePage({ stravaStatus, unit }: Props) {
-  const { efforts, loading: effortsLoading, error: effortsError, refresh: handleComputeEfforts } = useAthleteEfforts()
+  const { efforts, loading: effortsLoading, error: effortsError, refresh: handleComputeEfforts, rateLimitedUntil } = useAthleteEfforts()
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!rateLimitedUntil) { setSecondsLeft(null); return }
+    const update = () => setSecondsLeft(Math.max(Math.ceil((rateLimitedUntil - Date.now()) / 1000), 0))
+    update()
+    const t = setInterval(update, 1000)
+    return () => clearInterval(t)
+  }, [rateLimitedUntil])
 
   async function disconnect() {
     await deauthorizeStrava()
@@ -89,7 +99,14 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
           </button>
         </div>
 
-        {effortsError && <p className="text-xs text-red-400">{effortsError}</p>}
+        {effortsError && (
+          <div>
+            <p className="text-xs text-red-400">{effortsError}</p>
+            {rateLimitedUntil != null && secondsLeft !== null && secondsLeft > 0 && (
+              <p className="text-xs text-gray-500 mt-1">Retrying automatically in {secondsLeft}s</p>
+            )}
+          </div>
+        )}
 
         {effortsLoading && (
           <div className="grid grid-cols-3 gap-2">

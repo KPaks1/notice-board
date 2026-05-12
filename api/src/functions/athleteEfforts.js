@@ -37,7 +37,9 @@ app.http('athleteEffortsRefresh', {
       return { jsonBody: { computed: true, ...result } }
     } catch (err) {
       if (err instanceof StravaError) {
-        return { status: stravaHttpStatus(err.status), jsonBody: { error: err.message } }
+        const status = stravaHttpStatus(err.status)
+        const headers = err.retryAfter != null ? { 'Retry-After': String(err.retryAfter) } : {}
+        return { status, headers, jsonBody: { error: err.message } }
       }
       throw err
     }
