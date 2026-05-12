@@ -59,7 +59,7 @@ export function PrivacyContent() {
           <li>Your Strava profile information (name, profile photo, activity type preference)</li>
           <li>Strava OAuth token used to access the Strava API</li>
         </ul>
-        <p className="mt-2">A session token is stored for the duration of your visit and is never sent to third parties.</p>
+        <p className="mt-2">A session token is stored in your browser's local storage so you stay logged in across visits. It persists until you disconnect Strava or clear your browser data, and is never sent to third parties.</p>
       </Section>
 
       <Section title="How we use it">
