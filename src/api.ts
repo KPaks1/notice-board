@@ -3,15 +3,15 @@ import type { BestEffortsResponse, ScoredSegment, StravaStatus } from './types'
 export const TOKEN_KEY = 'en_token'
 
 export function storeToken(token: string) {
-  sessionStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(TOKEN_KEY, token)
 }
 
 export function clearToken() {
-  sessionStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(TOKEN_KEY)
 }
 
 export function authHeaders(): Record<string, string> {
-  const token = sessionStorage.getItem(TOKEN_KEY)
+  const token = localStorage.getItem(TOKEN_KEY)
   return token ? { 'X-Session-Token': token } : {}
 }
 
@@ -32,7 +32,7 @@ function parseRetryAfter(res: Response): number {
 
 export async function fetchStravaStatus(): Promise<StravaStatus> {
   const res = await fetch('/api/strava-status', { headers: authHeaders() })
-  if (res.status === 401) return { connected: false }
+  if (res.status === 401) { clearToken(); return { connected: false } }
   if (!res.ok) throw new Error(`status ${res.status}`)
   return res.json()
 }

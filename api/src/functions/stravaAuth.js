@@ -16,7 +16,6 @@ app.http('stravaAuth', {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      approval_prompt: 'force',
       scope: 'read,activity:read_all',
     })
 
