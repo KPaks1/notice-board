@@ -94,7 +94,7 @@ export function PrivacyContent() {
   )
 }
 
-function TosContent() {
+export function TosContent() {
   return (
     <>
       <p className="text-gray-500 text-xs">Last updated: May 2026</p>

@@ -8,6 +8,7 @@ import ConnectStrava from './pages/ConnectStrava'
 import Dashboard from './pages/Dashboard'
 import ErrorPage from './pages/ErrorPage'
 import PrivacyPage from './pages/PrivacyPage'
+import TosPage from './pages/TosPage'
 import SegmentDetailPage from './pages/SegmentDetailPage'
 import WelcomePage from './pages/WelcomePage'
 
@@ -146,6 +147,7 @@ export default function App() {
       <ErrorBoundary>
         <Routes>
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms-of-service" element={<TosPage />} />
           <Route path="/connect-strava" element={<ConnectStrava />} />
           <Route path="*" element={
             <StravaGuard>
