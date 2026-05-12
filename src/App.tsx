@@ -2,10 +2,12 @@ import { Component, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { fetchStravaStatus, refreshAthleteEfforts, storeToken } from './api'
+import { APP_NAME } from './constants'
 import type { StravaStatus } from './types'
 import ConnectStrava from './pages/ConnectStrava'
 import Dashboard from './pages/Dashboard'
 import ErrorPage from './pages/ErrorPage'
+import PrivacyPage from './pages/PrivacyPage'
 import SegmentDetailPage from './pages/SegmentDetailPage'
 import WelcomePage from './pages/WelcomePage'
 
@@ -128,7 +130,7 @@ function EffortErrorScreen() {
 function SetupScreen() {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
+      <h1 className="text-xl font-bold text-white tracking-tight">{APP_NAME}</h1>
       <div className="w-8 h-8 border-2 border-strava border-t-transparent rounded-full animate-spin" />
       <div>
         <p className="text-white font-medium text-sm">Setting up your pace profile</p>
@@ -143,6 +145,8 @@ export default function App() {
     <BrowserRouter>
       <ErrorBoundary>
         <Routes>
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/connect-strava" element={<ConnectStrava />} />
           <Route path="*" element={
             <StravaGuard>
               {(status) => (

@@ -1,10 +1,12 @@
+import { APP_NAME } from '../constants'
+
 export default function WelcomePage({ onStart }: { onStart: () => void }) {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col px-6 py-12 max-w-lg mx-auto sm:rounded-2xl sm:overflow-hidden sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10">
       <div className="flex-1 flex flex-col justify-center gap-10">
 
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">Eviction Notice</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">{APP_NAME}</h1>
           <p className="text-gray-400 text-sm leading-relaxed">
             Find Strava segments near you that you can actually beat — or are close enough to chase.
           </p>

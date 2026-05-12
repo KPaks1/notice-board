@@ -15,6 +15,9 @@ dist-ssr
 # Azure Functions local secrets
 api/local.settings.json
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

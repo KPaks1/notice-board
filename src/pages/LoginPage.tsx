@@ -1,10 +1,12 @@
+import { APP_NAME } from '../constants'
+
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-10 w-full max-w-sm text-center shadow-xl">
         <div className="mb-6">
           <span className="text-5xl">🚴</span>
-          <h1 className="mt-4 text-2xl font-bold text-white tracking-tight">Eviction Notice</h1>
+          <h1 className="mt-4 text-2xl font-bold text-white tracking-tight">{APP_NAME}</h1>
           <p className="mt-2 text-gray-400 text-sm">
             Find nearby Strava segments you can beat.
           </p>

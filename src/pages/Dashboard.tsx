@@ -8,6 +8,7 @@ import { formatRadius } from '../format'
 import type { Settings, ScoredSegment, SortBy, StravaStatus } from '../types'
 import { fetchRoadDistances } from '../osrm'
 import { resetSegmentPool } from '../api'
+import { APP_NAME } from '../constants'
 import { haversineKm } from '../geo'
 import EvictionsList from '../components/EvictionsList'
 import SegmentsMap from '../components/SegmentsMap'
@@ -181,7 +182,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     <div className="h-screen bg-gray-950 flex flex-col max-w-lg mx-auto sm:rounded-2xl sm:overflow-hidden sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10 md:max-w-none md:rounded-none md:shadow-none md:ring-0">
       <header className="relative flex items-center justify-between px-4 pt-6 pb-4 md:px-6 md:pt-4 md:pb-3 md:border-b md:border-gray-800 shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
+          <h1 className="text-xl font-bold text-white tracking-tight">{APP_NAME}</h1>
           <div className="flex items-center gap-2 mt-0.5">
             {coords && (
               <p className="text-xs text-gray-500">

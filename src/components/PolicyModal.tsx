@@ -1,4 +1,5 @@
 import { X } from 'lucide-react'
+import { APP_NAME } from '../constants'
 
 interface PolicyModalProps {
   type: 'privacy' | 'tos'
@@ -38,7 +39,7 @@ export default function PolicyModal({ type, onClose }: PolicyModalProps) {
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
       <h3 className="font-semibold text-white mb-1.5">{title}</h3>
@@ -47,20 +48,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function PrivacyContent() {
+export function PrivacyContent() {
   return (
     <>
       <p className="text-gray-500 text-xs">Last updated: May 2026</p>
 
       <Section title="What we collect">
-        <p>When you connect your Strava account, Eviction Notice collects and stores the following on our servers:</p>
+        <p>When you connect your Strava account, {APP_NAME} collects and stores the following on our servers:</p>
         <ul className="list-disc ml-4 mt-2 space-y-1 text-gray-400">
           <li>Your Strava profile information (name, profile photo, activity type preference)</li>
-          <li>Strava OAuth tokens needed to access the API on your behalf</li>
-          <li>Pace metrics computed from your recent activity history</li>
-          <li>A cache of nearby segment data to reduce API usage</li>
+          <li>Strava OAuth token used to access the Strava API</li>
         </ul>
-        <p className="mt-2">A session token is stored in your browser's sessionStorage for the duration of your visit and is never sent to third parties.</p>
+        <p className="mt-2">A session token is stored for the duration of your visit and is never sent to third parties.</p>
       </Section>
 
       <Section title="How we use it">
@@ -68,17 +67,17 @@ function PrivacyContent() {
       </Section>
 
       <Section title="Storage and security">
-        <p>Profile data and tokens are stored in Microsoft Azure Table Storage, protected by account key authentication and served only to verified session holders. No plain-text tokens are logged or exposed in the browser.</p>
+        <p>Profile data and tokens are stored securely in Azure, served only to verified session holders.</p>
       </Section>
 
       <Section title="Data retention">
-        <p>Your data is retained until you disconnect your Strava account via the Profile tab. Disconnecting revokes our Strava authorisation and deletes all stored tokens and profile data from our servers immediately.</p>
+        <p>Your data is retained until you disconnect your Strava account via the Profile tab. Disconnecting revokes our Strava authorisation and deletes all stored tokens and profile data from our servers immediately. Cached data will remain for a short period of time after deauthorization until it expires.</p>
       </Section>
 
       <Section title="Third-party services">
         <ul className="list-disc ml-4 space-y-1 text-gray-400">
           <li><span className="text-gray-300 font-medium">Strava</span> — activity and segment data via the official Strava API</li>
-          <li><span className="text-gray-300 font-medium">Microsoft Azure</span> — server-side data storage</li>
+          <li><span className="text-gray-300 font-medium">Azure</span> — server-side data storage & translations</li>
         </ul>
         <p className="mt-2">We do not sell, share, or transfer your personal data to any third party for their own purposes.</p>
       </Section>
@@ -101,11 +100,11 @@ function TosContent() {
       <p className="text-gray-500 text-xs">Last updated: May 2026</p>
 
       <Section title="Acceptance">
-        <p>By connecting your Strava account and using Eviction Notice, you agree to these Terms of Service. If you do not agree, do not use the app.</p>
+        <p>By connecting your Strava account and using {APP_NAME}, you agree to these Terms of Service. If you do not agree, do not use the app.</p>
       </Section>
 
       <Section title="Use of the service">
-        <p>Eviction Notice is provided for personal, non-commercial use only. By using this app you also agree to comply with{' '}
+        <p>{APP_NAME} is provided for personal, non-commercial use only. By using this app you also agree to comply with{' '}
           <a href="https://www.strava.com/legal/terms" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-white">
             Strava's Terms of Service
           </a>. You may not use this app to scrape, abuse, or circumvent the Strava API or any rate limits imposed by Strava.

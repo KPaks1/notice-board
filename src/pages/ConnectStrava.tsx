@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Crown } from 'lucide-react'
 import stravaBtn from '../assets/strava/connect-with/btn_strava_connect_with_orange_x2.svg'
 import PolicyModal from '../components/PolicyModal'
+import { APP_NAME } from '../constants'
 
 const CONSENT_KEY = 'en_consent'
 
@@ -33,9 +34,9 @@ export default function ConnectStrava() {
           <div className="flex justify-center">
             <Crown size={48} className="text-orange-500" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-white tracking-tight">Eviction Notice</h1>
+          <h1 className="mt-4 text-2xl font-bold text-white tracking-tight">{APP_NAME}</h1>
           <p className="mt-3 text-gray-400 text-sm leading-relaxed">
-            Eviction Notice analyses your activity history to find nearby segments you can beat.
+            {APP_NAME} analyses your activity history to find nearby segments you can beat.
           </p>
         </div>
         <ul className="text-left text-sm text-gray-400 mb-6 space-y-2">

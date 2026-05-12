@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { APP_NAME } from '../constants'
 
 function goHome() {
   window.location.replace('/')
@@ -18,7 +19,7 @@ export default function ErrorPage() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-xl font-bold text-white tracking-tight">Eviction Notice</h1>
+      <h1 className="text-xl font-bold text-white tracking-tight">{APP_NAME}</h1>
       <p className="text-white font-medium text-sm">Oops, something went wrong</p>
       <p className="text-gray-500 text-xs">Heading back home in {countdown}…</p>
       <button
