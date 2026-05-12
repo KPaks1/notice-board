@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Crosshair, ExternalLink, LocateFixed, Navigation, Star } from 'lucide-react'
+import { ChevronLeft, Crosshair, ExternalLink, LocateFixed, Navigation } from 'lucide-react'
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
-import { clearToken, fetchSegmentElevation, starSegment } from '../api'
+import { fetchSegmentElevation } from '../api'
 import { fetchRoadDistance } from '../osrm'
 import { haversineKm } from '../geo'
 import DistanceToStart from '../components/DistanceToStart'
@@ -41,20 +41,8 @@ export default function SegmentDetailPage() {
   const { state } = useLocation()
   const segment: ScoredSegment | null = state?.segment ?? (state as ScoredSegment | null)
   const unit: Unit = state?.unit ?? 'km'
-  const [starred, setStarred] = useState(segment?.starred ?? false)
-  const [starring, setStarring] = useState(false)
-  const [starCooldown, setStarCooldown] = useState(false)
-  const [starError, setStarError] = useState<string | null>(null)
-  const [starSuccess, setStarSuccess] = useState<string | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const mapPanelRef = useRef<HTMLDivElement>(null)
-  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => () => {
-    if (cooldownTimer.current) clearTimeout(cooldownTimer.current)
-    if (successTimer.current) clearTimeout(successTimer.current)
-  }, [])
 
   // Invalidate Leaflet size when the map panel resizes (e.g. mobile→desktop layout shift)
   useEffect(() => {
@@ -66,35 +54,6 @@ export default function SegmentDetailPage() {
   }, [])
 
   const onMapReady = useCallback((m: L.Map) => { mapRef.current = m }, [])
-
-  async function toggleStar() {
-    if (!segment || starring || starCooldown) return
-    const next = !starred
-    setStarred(next)
-    setStarError(null)
-    setStarSuccess(null)
-    setStarring(true)
-    try {
-      await starSegment(segment.id, next)
-      const msg = next ? 'Starred on Strava' : 'Unstarred on Strava'
-      setStarSuccess(msg)
-      if (successTimer.current) clearTimeout(successTimer.current)
-      successTimer.current = setTimeout(() => setStarSuccess(null), 1800)
-    } catch (e) {
-      setStarred(!next)
-      const msg = e instanceof Error ? e.message : ''
-      setStarError(
-        msg === 'scope_required'
-          ? 'Disconnect and reconnect Strava to enable starring segments.'
-          : 'Failed to update star.',
-      )
-    } finally {
-      setStarring(false)
-      setStarCooldown(true)
-      if (cooldownTimer.current) clearTimeout(cooldownTimer.current)
-      cooldownTimer.current = setTimeout(() => setStarCooldown(false), 3000)
-    }
-  }
 
   const userLat: number | null = state?.userLat ?? null
   const userLng: number | null = state?.userLng ?? null
@@ -211,14 +170,6 @@ export default function SegmentDetailPage() {
             <p className="text-xs text-gray-500 italic line-clamp-1">{segment.translatedName}</p>
           )}
         </div>
-        <button
-          onClick={toggleStar}
-          disabled={starring || starCooldown}
-          className="p-1 rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-40"
-          aria-label={starred ? 'Unstar segment' : 'Star segment'}
-        >
-          <Star size={20} className={starred ? 'text-yellow-400 fill-yellow-400' : ''} />
-        </button>
         <Badge score={segment.score} />
       </header>
 
@@ -262,20 +213,6 @@ export default function SegmentDetailPage() {
               />
             </div>
           ) : null}
-
-          {starError && (
-            <div className="flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-3 py-2">
-              <p className="text-xs text-red-400">{starError}</p>
-              {starError.includes('reconnect') && (
-                <button
-                  onClick={() => { clearToken(); navigate('/connect-strava', { replace: true }) }}
-                  className="text-xs text-strava hover:text-strava-light shrink-0"
-                >
-                  Reconnect
-                </button>
-              )}
-            </div>
-          )}
 
           <div className="flex gap-2">
             {mapsUrl && (
@@ -361,24 +298,6 @@ export default function SegmentDetailPage() {
         </div>
       </div>
 
-      {starSuccess && (
-        <>
-          <style>{`
-            @keyframes toast-pop {
-              0%   { opacity: 0; transform: translateX(-50%) scale(0.92); }
-              12%  { opacity: 1; transform: translateX(-50%) scale(1); }
-              75%  { opacity: 1; transform: translateX(-50%) scale(1); }
-              100% { opacity: 0; transform: translateX(-50%) scale(0.92); }
-            }
-          `}</style>
-          <div
-            style={{ animation: 'toast-pop 1.8s ease-in-out forwards' }}
-            className="fixed bottom-24 left-1/2 z-[2000] bg-gray-900 border border-gray-700 rounded-xl px-5 py-3 shadow-xl pointer-events-none"
-          >
-            <p className="text-white text-sm font-medium whitespace-nowrap">{starSuccess}</p>
-          </div>
-        </>
-      )}
     </div>
   )
 }

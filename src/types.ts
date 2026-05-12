@@ -36,7 +36,6 @@ export interface ScoredSegment {
   polyline: string | null
   startLatlng: [number, number] | null
   endLatlng: [number, number] | null
-  starred: boolean
 }
 
 export interface StravaStatus {

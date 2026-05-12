@@ -17,7 +17,7 @@ app.http('stravaAuth', {
       redirect_uri: redirectUri,
       response_type: 'code',
       approval_prompt: 'force',
-      scope: 'read,activity:read_all,profile:write',
+      scope: 'read,activity:read_all',
     })
 
     return {

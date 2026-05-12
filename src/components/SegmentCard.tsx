@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { Star } from 'lucide-react'
 import type { ScoredSegment } from '../types'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 import { haversineKm } from '../geo'
@@ -55,7 +54,6 @@ export default function SegmentCard({ segment, unit, userLat, userLng, roadDista
             )}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            {segment.starred && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
             <Badge score={segment.score} />
           </div>
         </div>
