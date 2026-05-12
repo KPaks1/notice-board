@@ -87,6 +87,41 @@ export async function deauthorizeStrava(): Promise<void> {
   }).catch(() => {})
 }
 
+export type AdminAthlete = { athleteId: string; athleteName: string | null; athletePhoto: string | null }
+type AdminResult = { revoked: number; errors: { athleteId: string; error: string }[] }
+
+function adminHeaders(secret: string): Record<string, string> {
+  return { 'x-admin-secret': secret }
+}
+
+export async function fetchAdminAthletes(secret: string): Promise<AdminAthlete[]> {
+  const res = await fetch('/api/mgmt/athletes', { headers: adminHeaders(secret) })
+  if (res.status === 401) throw new Error('Invalid secret')
+  if (!res.ok) throw new Error('Failed to fetch athletes')
+  return res.json()
+}
+
+export async function adminDeauthAll(secret: string): Promise<AdminResult> {
+  const res = await fetch('/api/mgmt/force-deauth-all', {
+    method: 'POST',
+    headers: adminHeaders(secret),
+  })
+  if (res.status === 401) throw new Error('Invalid secret')
+  if (!res.ok) throw new Error('Failed to deauth')
+  return res.json()
+}
+
+export async function adminDeauthSome(secret: string, athleteIds: string[]): Promise<AdminResult> {
+  const res = await fetch('/api/mgmt/force-deauth', {
+    method: 'POST',
+    headers: { ...adminHeaders(secret), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ athleteIds }),
+  })
+  if (res.status === 401) throw new Error('Invalid secret')
+  if (!res.ok) throw new Error('Failed to deauth')
+  return res.json()
+}
+
 export async function refreshAthleteEfforts(): Promise<BestEffortsResponse> {
   const res = await fetch('/api/athlete-efforts/refresh', {
     method: 'POST',

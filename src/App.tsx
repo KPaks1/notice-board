@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { fetchStravaStatus, refreshAthleteEfforts, storeToken } from './api'
 import type { StravaStatus } from './types'
+import AdminPage from './pages/AdminPage'
 import ConnectStrava from './pages/ConnectStrava'
 import Dashboard from './pages/Dashboard'
 import ErrorPage from './pages/ErrorPage'
@@ -142,15 +143,20 @@ export default function App() {
   return (
     <BrowserRouter>
       <ErrorBoundary>
-        <StravaGuard>
-          {(status) => (
-            <Routes>
-              <Route path="/" element={<OnboardingGate status={status} />} />
-              <Route path="/segment/:id" element={<SegmentDetailPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          )}
-        </StravaGuard>
+        <Routes>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={
+            <StravaGuard>
+              {(status) => (
+                <Routes>
+                  <Route path="/" element={<OnboardingGate status={status} />} />
+                  <Route path="/segment/:id" element={<SegmentDetailPage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              )}
+            </StravaGuard>
+          } />
+        </Routes>
       </ErrorBoundary>
     </BrowserRouter>
   )

@@ -1,3 +1,4 @@
+import './functions/adminForceDeauthAll.js'
 import './functions/stravaAuth.js'
 import './functions/stravaDeauthorize.js'
 import './functions/stravaCallback.js'
