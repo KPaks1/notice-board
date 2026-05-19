@@ -10,6 +10,7 @@ import { haversineKm } from '../geo'
 import DistanceToStart from '../components/DistanceToStart'
 import { MapButton } from '../components/MapButton'
 import ElevationChart from '../components/ElevationChart'
+import ScoreGauge from '../components/ScoreGauge'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 import type { ScoredSegment } from '../types'
 
@@ -259,6 +260,8 @@ export default function SegmentDetailPage() {
               <StatBox label="Est. best" value={formatTime(segment.estimatedTime)} sub={formatPace(segment.estimatedTime, segment.distance, unit)} />
             )}
           </div>
+
+          <ScoreGauge score={segment.score} />
 
           {elevationLoading ? (
             <div className="bg-gray-800/60 rounded-xl p-3 animate-pulse">
