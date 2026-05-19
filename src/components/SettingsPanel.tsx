@@ -19,7 +19,7 @@ const TARGET_OPTIONS: { value: TargetType; label: string }[] = [
 
 const ACTIVITY_OPTIONS: { value: ActivityType; label: string }[] = [
   { value: 'running', label: 'Running' },
-  { value: 'cycling', label: 'Cycling' },
+  // { value: 'cycling', label: 'Cycling' },
 ]
 
 export default function SettingsPanel({ settings, onChange, onResetPool, segmentDistanceRange, segmentElevationRange, segmentCounts }: Props) {

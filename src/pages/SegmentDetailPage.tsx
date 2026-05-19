@@ -173,71 +173,21 @@ export default function SegmentDetailPage() {
         <Badge score={segment.score} />
       </header>
 
-      {/* Two-column on desktop, single column on mobile */}
-      <div className="flex-1 min-h-0 md:flex md:overflow-hidden">
+      {/* Two-column on desktop (CSS grid), ordered single column on mobile (flex-col) */}
+      <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[420px_1fr] md:grid-rows-[auto_1fr] md:overflow-hidden">
 
-        {/* Left: info panel */}
-        <div className="px-4 pb-4 overflow-y-auto no-scrollbar space-y-5 md:w-[420px] md:shrink-0 md:border-r md:border-gray-800 md:py-6 md:px-6">
+        {/* Segment metadata — order 2 on mobile (below map), top of left column on desktop */}
+        <div className="px-4 pt-4 order-2 md:col-start-1 md:row-start-1 md:px-6 md:pt-6 md:border-r md:border-gray-800">
           <div className="text-xs text-gray-500">
             {formatDistance(segment.distance, unit)}
             {segment.elevationGain > 0 && ` · ↑${Math.round(segment.elevationGain)}m ↓${Math.round(segment.elevationLoss)}m`}
             {segment.city && ` · ${segment.city}`}
             {displayDistanceM != null && <> · <DistanceToStart distanceM={displayDistanceM} isByPlane={isByPlane} unit={unit} /></>}
           </div>
-
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} sub={formatPace(segment.targetTime, segment.distance, unit)} />
-              <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} sub={segment.userPR ? formatPace(segment.userPR, segment.distance, unit) : undefined} />
-            </div>
-            {segment.estimatedTime != null && (
-              <StatBox label="Est. best" value={formatTime(segment.estimatedTime)} sub={formatPace(segment.estimatedTime, segment.distance, unit)} />
-            )}
-          </div>
-
-          {elevationLoading ? (
-            <div className="bg-gray-800/60 rounded-xl p-3 animate-pulse">
-              <div className="h-3 w-24 bg-gray-700 rounded mb-3" />
-              <div className="h-3 w-40 bg-gray-700 rounded mb-2" />
-              <div className="h-[88px] bg-gray-700 rounded-lg" />
-            </div>
-          ) : elevation ? (
-            <div className="bg-gray-800/60 rounded-xl p-3">
-              <p className="text-xs font-semibold text-gray-400 mb-2">Elevation</p>
-              <ElevationChart
-                altitude={elevation.altitude}
-                distance={elevation.distance}
-                unit={unit}
-                hoverDistanceM={hoverDistanceM}
-                onHoverDistance={setHoverDistanceM}
-              />
-            </div>
-          ) : null}
-
-          <div className="flex gap-2">
-            {mapsUrl && (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-gray-800 text-white text-sm font-semibold hover:bg-gray-700 transition-colors"
-              >
-                Directions <Navigation size={15} />
-              </a>
-            )}
-            <a
-              href={`https://www.strava.com/segments/${segment.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-strava text-white text-sm font-semibold hover:bg-strava-dark transition-colors"
-            >
-              View on Strava <ExternalLink size={15} />
-            </a>
-          </div>
         </div>
 
-        {/* Right: map panel — 240px on mobile, full height on desktop */}
-        <div ref={mapPanelRef} className="relative md:flex-1 md:min-w-0">
+        {/* Map panel — order 1 on mobile (first), right column on desktop */}
+        <div ref={mapPanelRef} className="relative order-1 md:col-start-2 md:row-start-1 md:row-span-2">
           {decodedPath && mapBounds ? (
             <div className="rounded-xl overflow-hidden relative mx-4 my-4 md:mx-0 md:my-0 md:rounded-none h-60 md:h-full">
               <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
@@ -295,6 +245,59 @@ export default function SegmentDetailPage() {
               Route unavailable
             </div>
           )}
+        </div>
+
+        {/* Stats, elevation, buttons — order 3 on mobile, bottom of left column on desktop */}
+        <div className="px-4 pt-4 pb-4 space-y-5 order-3 md:col-start-1 md:row-start-2 md:overflow-y-auto md:no-scrollbar md:pt-5 md:pb-6 md:px-6 md:border-r md:border-gray-800">
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} sub={formatPace(segment.targetTime, segment.distance, unit)} />
+              <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} sub={segment.userPR ? formatPace(segment.userPR, segment.distance, unit) : undefined} />
+            </div>
+            {segment.estimatedTime != null && (
+              <StatBox label="Est. best" value={formatTime(segment.estimatedTime)} sub={formatPace(segment.estimatedTime, segment.distance, unit)} />
+            )}
+          </div>
+
+          {elevationLoading ? (
+            <div className="bg-gray-800/60 rounded-xl p-3 animate-pulse">
+              <div className="h-3 w-24 bg-gray-700 rounded mb-3" />
+              <div className="h-3 w-40 bg-gray-700 rounded mb-2" />
+              <div className="h-[88px] bg-gray-700 rounded-lg" />
+            </div>
+          ) : elevation ? (
+            <div className="bg-gray-800/60 rounded-xl p-3">
+              <p className="text-xs font-semibold text-gray-400 mb-2">Elevation</p>
+              <ElevationChart
+                altitude={elevation.altitude}
+                distance={elevation.distance}
+                unit={unit}
+                hoverDistanceM={hoverDistanceM}
+                onHoverDistance={setHoverDistanceM}
+              />
+            </div>
+          ) : null}
+
+          <div className="flex gap-2">
+            {mapsUrl && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-gray-800 text-white text-sm font-semibold hover:bg-gray-700 transition-colors"
+              >
+                Directions <Navigation size={15} />
+              </a>
+            )}
+            <a
+              href={`https://www.strava.com/segments/${segment.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-strava text-white text-sm font-semibold hover:bg-strava-dark transition-colors"
+            >
+              View on Strava <ExternalLink size={15} />
+            </a>
+          </div>
         </div>
       </div>
 
