@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
 import RangeSlider from './RangeSlider'
 import type { Settings } from '../types'
@@ -15,20 +15,27 @@ interface Props {
 
 export default function MapFilterOverlay({ settings, onChange, segmentDistanceRange, segmentElevationRange, segmentCount }: Props) {
   const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   const u = settings.unit
+
+  useEffect(() => {
+    if (!open) return
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
   const distMin = segmentDistanceRange?.min ?? 0
   const distMax = segmentDistanceRange?.max ?? 50
   const elevMax = segmentElevationRange?.max ?? 25
 
   return (
     <>
-      {open && (
-        <div
-          className="fixed inset-0 z-[1002]"
-          onClick={() => setOpen(false)}
-        />
-      )}
-      <div className="absolute bottom-4 right-4 z-[1003] flex flex-col items-end gap-2">
+      <div ref={containerRef} className="absolute bottom-4 right-4 z-[1003] flex flex-col items-end gap-2">
         {open && (
           <div ref={preventZoom} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 w-72 shadow-xl space-y-5">
 
