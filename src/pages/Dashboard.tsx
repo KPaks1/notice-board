@@ -11,6 +11,7 @@ import { resetSegmentPool } from '../api'
 import { APP_NAME } from '../constants'
 import { haversineKm } from '../geo'
 import EvictionsList from '../components/EvictionsList'
+import { MapButton } from '../components/MapButton'
 import SegmentsMap from '../components/SegmentsMap'
 import SettingsPanel from '../components/SettingsPanel'
 import MapFilterOverlay from '../components/MapFilterOverlay'
@@ -297,13 +298,13 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                 onSegmentHover={handleHoverSegment}
                 onMapReady={(m) => { segMapRef.current = m }}
               />
-              <button
+              <MapButton
                 onClick={() => segMapRef.current?.setView([coords.lat, coords.lng], 13)}
                 className="absolute top-4 right-4 z-[1003] p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-blue-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
                 aria-label="Recentre on my location"
               >
                 <LocateFixed size={16} />
-              </button>
+              </MapButton>
               <MapFilterOverlay
                 settings={settings}
                 onChange={setSettings}

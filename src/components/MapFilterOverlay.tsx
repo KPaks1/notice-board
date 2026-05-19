@@ -3,6 +3,7 @@ import { SlidersHorizontal } from 'lucide-react'
 import RangeSlider from './RangeSlider'
 import type { Settings } from '../types'
 import { formatRadius, formatKm, formatElevation } from '../format'
+import { MapButton, preventZoom } from './MapButton'
 
 interface Props {
   settings: Settings
@@ -29,7 +30,7 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
       )}
       <div className="absolute bottom-4 right-4 z-[1003] flex flex-col items-end gap-2">
         {open && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 w-72 shadow-xl space-y-5">
+          <div ref={preventZoom} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 w-72 shadow-xl space-y-5">
 
             <div>
               <div className="flex justify-between items-baseline mb-2">
@@ -100,7 +101,7 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
           </div>
         )}
 
-        <button
+        <MapButton
           onClick={() => setOpen(!open)}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-lg transition-colors ${
             open
@@ -110,7 +111,7 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
         >
           <SlidersHorizontal size={15} />
           <span className="text-xs font-medium tabular-nums">{segmentCount}</span>
-        </button>
+        </MapButton>
       </div>
     </>
   )

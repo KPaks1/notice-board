@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { ScoredSegment } from '../types'
+import { preventZoom } from './MapButton'
 
 interface Props {
   segments: ScoredSegment[]
@@ -76,6 +77,11 @@ function SegmentMarker({ seg, hovered, onSegmentClick, onSegmentHover }: { seg: 
     >
       <Popup>
         <div
+          ref={(el) => {
+            if (!el) return
+            L.DomEvent.disableScrollPropagation(el)
+            preventZoom(el)
+          }}
           style={{ minWidth: '140px' }}
           onMouseEnter={() => onSegmentHover?.(seg.id)}
           onMouseLeave={() => onSegmentHover?.(null)}

@@ -8,6 +8,7 @@ import { fetchSegmentElevation } from '../api'
 import { fetchRoadDistance } from '../osrm'
 import { haversineKm } from '../geo'
 import DistanceToStart from '../components/DistanceToStart'
+import { MapButton } from '../components/MapButton'
 import ElevationChart from '../components/ElevationChart'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
 import type { ScoredSegment } from '../types'
@@ -219,21 +220,21 @@ export default function SegmentDetailPage() {
                 <MapController onReady={onMapReady} />
               </MapContainer>
               <div className="absolute bottom-2 right-2 z-[1000] flex flex-col gap-1">
-                <button
+                <MapButton
                   onClick={() => mapRef.current?.fitBounds(mapBounds, { padding: [20, 20] })}
                   className="p-2 rounded-lg bg-gray-900/90 text-white hover:bg-gray-800 transition-colors shadow"
                   aria-label="Recentre on segment"
                 >
                   <Crosshair size={16} />
-                </button>
+                </MapButton>
                 {userLat != null && userLng != null && (
-                  <button
+                  <MapButton
                     onClick={() => mapRef.current?.setView([userLat, userLng], 15)}
                     className="p-2 rounded-lg bg-gray-900/90 text-blue-400 hover:bg-gray-800 transition-colors shadow"
                     aria-label="Recentre on my location"
                   >
                     <LocateFixed size={16} />
-                  </button>
+                  </MapButton>
                 )}
               </div>
             </div>
