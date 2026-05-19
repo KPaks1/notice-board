@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { SegmentMode, ScoredSegment } from '../types'
 import type { Unit } from '../format'
 import SegmentCard from './SegmentCard'
+
+const PAGE_SIZE = 25
 
 function Skeleton() {
   return (
@@ -48,6 +50,25 @@ function useSecondsUntil(timestamp: number | null | undefined): number | null {
 
 export default function EvictionsList({ segments, loading, error, onRefresh, mode, unit, userLat, userLng, roadDistances, onHoverSegment, rateLimitedUntil }: Props) {
   const secondsLeft = useSecondsUntil(rateLimitedUntil)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  // Reset to first page whenever the segment list changes (new fetch, sort change, filter change)
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [segments])
+
+  // Auto-load next page when the sentinel scrolls into view
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisibleCount((c) => Math.min(c + PAGE_SIZE, segments.length)) },
+      { rootMargin: '200px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [segments.length])
 
   if (loading) {
     return (
@@ -91,13 +112,16 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
   }
 
   const label = mode === 'hunt' ? '🎯 In Range' : '🌾 Easy Wins'
+  const visible = segments.slice(0, visibleCount)
+  const hasMore = visibleCount < segments.length
 
   return (
     <div className="space-y-3">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
         {label} ({segments.length})
       </p>
-      {segments.map((s) => <SegmentCard key={s.id} segment={s} unit={unit} userLat={userLat} userLng={userLng} roadDistance={roadDistances[s.id]} onHover={onHoverSegment} />)}
+      {visible.map((s) => <SegmentCard key={s.id} segment={s} unit={unit} userLat={userLat} userLng={userLng} roadDistance={roadDistances[s.id]} onHover={onHoverSegment} />)}
+      {hasMore && <div ref={sentinelRef} className="h-4" />}
     </div>
   )
 }

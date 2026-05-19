@@ -192,6 +192,48 @@ export async function setSegmentCache(segId, athleteId, data) {
   )
 }
 
+export async function getSharedSegmentCache(segId) {
+  const client = getClient()
+  try {
+    const entity = await client.getEntity('segCore', String(segId))
+    if (!entity.cachedAt) return null
+    if (Date.now() - new Date(entity.cachedAt).getTime() > SEGMENT_CACHE_TTL_MS) return null
+    return entity.data ? decompress(entity.data) : null
+  } catch (err) {
+    if (err.statusCode === 404) return null
+    throw err
+  }
+}
+
+export async function setSharedSegmentCache(segId, data) {
+  const client = await getClientReady()
+  await client.upsertEntity(
+    { partitionKey: 'segCore', rowKey: String(segId), data: compress(data), cachedAt: new Date().toISOString() },
+    'Replace',
+  )
+}
+
+export async function getUserPRCache(segId, athleteId) {
+  const client = getClient()
+  try {
+    const entity = await client.getEntity('segPr', `${segId}:${athleteId}`)
+    if (!entity.cachedAt) return null
+    if (Date.now() - new Date(entity.cachedAt).getTime() > SEGMENT_CACHE_TTL_MS) return null
+    return entity.data ? decompress(entity.data) : null
+  } catch (err) {
+    if (err.statusCode === 404) return null
+    throw err
+  }
+}
+
+export async function setUserPRCache(segId, athleteId, data) {
+  const client = await getClientReady()
+  await client.upsertEntity(
+    { partitionKey: 'segPr', rowKey: `${segId}:${athleteId}`, data: compress(data), cachedAt: new Date().toISOString() },
+    'Replace',
+  )
+}
+
 export async function getSegmentPool(athleteId, activityType) {
   const client = getClient()
   try {

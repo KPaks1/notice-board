@@ -1,10 +1,12 @@
 import { app } from '@azure/functions'
 import {
-  listAthleteIds, getValidToken,
-  getSegmentPool, getSegmentCache, setSegmentCache,
+  listAthleteIds, getValidToken, getSegmentPool,
+  getSharedSegmentCache, setSharedSegmentCache,
+  getUserPRCache, setUserPRCache,
 } from '../tableClient.js'
 import { stravaGet } from '../stravaClient.js'
 import { translateToEnglish } from '../translator.js'
+import { extractCoreFields } from '../segmentHelpers.js'
 
 const DELAY_BETWEEN_FETCHES_MS = 600  // ~100 req/min, well under Strava's 100/15min limit
 
@@ -31,13 +33,21 @@ app.timer('segmentScoreJob', {
         let skipped = 0
 
         for (const seg of poolData.segments) {
-          const cached = await getSegmentCache(seg.id, athleteId)
-          if (cached) { skipped++; continue }
+          const coreExists = await getSharedSegmentCache(seg.id)
+          const prExists   = await getUserPRCache(seg.id, athleteId)
+          if (coreExists && prExists) { skipped++; continue }
 
           try {
             const detail = await stravaGet(`/segments/${seg.id}`, tokenData.accessToken)
             detail.translatedName = await translateToEnglish(detail.name)
-            await setSegmentCache(seg.id, athleteId, detail)
+            if (!coreExists) {
+              await setSharedSegmentCache(seg.id, extractCoreFields(detail))
+            }
+            if (!prExists) {
+              await setUserPRCache(seg.id, athleteId, {
+                prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null,
+              })
+            }
             fetched++
             await new Promise((r) => setTimeout(r, DELAY_BETWEEN_FETCHES_MS))
           } catch (err) {

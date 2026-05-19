@@ -17,13 +17,16 @@ function useDebounce<T>(value: T, ms: number): T {
   return debounced
 }
 
-export function useSegments(coords: Coords | null, activityType: string, targetType: string, radiusKm: number) {
+export function useSegments(coords: Coords | null, activityType: string, targetType: string, radiusKm: number, sortBy: string) {
   const [allSegments, setAllSegments] = useState<ScoredSegment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
   const coordsRef = useRef(coords)
   coordsRef.current = coords
+  // Read sortBy at call time so changing sort re-orders client-side without triggering a refetch
+  const sortByRef = useRef(sortBy)
+  sortByRef.current = sortBy
 
   const debouncedRadiusKm = useDebounce(radiusKm, 800)
 
@@ -40,7 +43,7 @@ export function useSegments(coords: Coords | null, activityType: string, targetT
     setLoading(true)
     setError(null)
     try {
-      setAllSegments(await fetchSegments(c.lat, c.lng, activityType, targetType, debouncedRadiusKm))
+      setAllSegments(await fetchSegments(c.lat, c.lng, activityType, targetType, debouncedRadiusKm, sortByRef.current))
       setRateLimitedUntil(null)
     } catch (e) {
       if (e instanceof RateLimitError) {

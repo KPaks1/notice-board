@@ -50,6 +50,7 @@ export async function fetchSegments(
   activityType: string,
   targetType: string,
   radiusKm: number,
+  sortBy: string,
 ): Promise<ScoredSegment[]> {
   const params = new URLSearchParams({
     lat: String(lat),
@@ -57,6 +58,7 @@ export async function fetchSegments(
     activityType,
     targetType,
     radiusKm: String(radiusKm),
+    sortBy,
   })
   const res = await fetch(`/api/segments?${params}`, { headers: authHeaders() })
   if (res.status === 429) throw new RateLimitError(parseRetryAfter(res))

@@ -1,11 +1,12 @@
 import { app } from '@azure/functions'
-import { getValidToken, getSegmentCache, setSegmentCache, getSegmentPool, setSegmentPool } from '../tableClient.js'
+import { getValidToken, getSegmentCache, getSharedSegmentCache, setSharedSegmentCache, getUserPRCache, setUserPRCache, getSegmentPool, setSegmentPool } from '../tableClient.js'
 import { estimateTimeForDistance } from './computeEfforts.js'
 import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
 import { StravaError, stravaHttpStatus } from '../stravaError.js'
 import { stravaGet } from '../stravaClient.js'
 import { translateToEnglish } from '../translator.js'
+import { extractCoreFields } from '../segmentHelpers.js'
 
 const TTL_EXPLORE = 4 * 60 * 60   // segment list: 4 hours
 const TTL_LEADERBOARD = 4 * 60 * 60  // segment details/KOM: 4 hours
@@ -42,17 +43,6 @@ function generateTiles(lat, lng, radiusKm, cols = 5, rows = 4) {
   return tiles
 }
 
-
-// xoms times can be formatted strings ("1:02") or integers (seconds)
-function parseXomTime(xom) {
-  if (!xom || xom === 'Not Specified') return null
-  if (typeof xom === 'number') return xom
-  const parts = String(xom).split(':').map(Number)
-  if (parts.some(isNaN) || parts.length < 2 || parts.length > 3) return null
-  return parts.length === 3
-    ? parts[0] * 3600 + parts[1] * 60 + parts[2]
-    : parts[0] * 60 + parts[1]
-}
 
 function bestEffortPaceForDistance(efforts, distanceM) {
   if (!efforts || efforts.length === 0) return null
@@ -100,6 +90,7 @@ app.http('segments', {
     const lng = parseFloat(request.query.get('lng') ?? '')
     const activityType = request.query.get('activityType') ?? 'running'
     const targetType = request.query.get('targetType') ?? 'kom'
+    const sortBy = request.query.get('sortBy') ?? 'score'
 
     const radiusKm = Math.min(parseFloat(request.query.get('radiusKm') ?? '5'), 20)
 
@@ -207,6 +198,18 @@ app.http('segments', {
       return { jsonBody: [] }
     }
 
+    // Pre-sort pool in scoring priority order so cold-start Strava fetch slots go to the most relevant segments
+    if (sortBy === 'length') {
+      allSegments.sort((a, b) => a.distance - b.distance)
+    } else {
+      // nearest and score: use haversine distance as priority proxy
+      allSegments.sort((a, b) => {
+        const aLat = a.start_latlng?.[0] ?? 0, aLng = a.start_latlng?.[1] ?? 0
+        const bLat = b.start_latlng?.[0] ?? 0, bLng = b.start_latlng?.[1] ?? 0
+        return haversineKm(lat, lng, aLat, aLng) - haversineKm(lat, lng, bLat, bLng)
+      })
+    }
+
     // Fall back to Strava recent stats if best efforts not yet computed
     const statsKey = `stats:${athleteId}:${activityType}`
     let statsUserPace = cacheGet(statsKey)
@@ -233,33 +236,67 @@ app.http('segments', {
 
     const scored = await mapWithConcurrency(allSegments, 5, async (seg) => {
         try {
-          const segKey = `seg:${seg.id}:${athleteId}`
-          const failKey = `seg:${seg.id}:${athleteId}:fail`
-          if (cacheGet(failKey)) return null                        // failed recently, don't retry yet
+          const coreL1Key = `segCore:${seg.id}`
+          const prL1Key   = `segPr:${seg.id}:${athleteId}`
+          const failKey   = `seg:${seg.id}:${athleteId}:fail`
+          if (cacheGet(failKey)) return null
 
-          let segDetail = cacheGet(segKey)                         // L1: in-memory
-          if (!segDetail) {
-            segDetail = await getSegmentCache(seg.id, athleteId)   // L2: Azure Table
-            if (segDetail) {
-              cacheSet(segKey, segDetail, TTL_LEADERBOARD)          // warm L1 from L2
-            } else if (stravaDetailFetches < MAX_DETAIL_FETCHES) {
-              stravaDetailFetches++
-              try {
-                segDetail = await stravaGet(`/segments/${seg.id}`, accessToken)
-                segDetail.translatedName = await translateToEnglish(segDetail.name)
-                cacheSet(segKey, segDetail, TTL_LEADERBOARD)        // write L1
-                setSegmentCache(seg.id, athleteId, segDetail)       // write L2 (background)
-              } catch (fetchErr) {
-                cacheSet(failKey, true, 5 * 60)                    // cooldown: skip for 5 min
-                context.warn(`Failed to score segment ${seg.id}:`, fetchErr.message)
-                return null
+          // Shared core: L1 → L2
+          let coreData = cacheGet(coreL1Key)
+          if (!coreData) {
+            coreData = await getSharedSegmentCache(seg.id)
+            if (coreData) cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
+          }
+
+          // User PR: L1 → L2 (null = cache miss, object = hit even if prElapsedTime is null)
+          let prData = cacheGet(prL1Key)
+          if (prData === null) {
+            prData = await getUserPRCache(seg.id, athleteId)
+            if (prData !== null) cacheSet(prL1Key, prData, TTL_LEADERBOARD)
+          }
+
+          // Legacy per-user segCache: promote to new partitions on first read, avoids re-fetch during warm-up
+          if (!coreData || prData === null) {
+            const legacy = await getSegmentCache(seg.id, athleteId)
+            if (legacy) {
+              if (!coreData) {
+                coreData = extractCoreFields(legacy)
+                cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
+                setSharedSegmentCache(seg.id, coreData)
               }
-            } else {
-              return null                                           // cap reached — try next request
+              if (prData === null) {
+                prData = { prElapsedTime: legacy.athlete_segment_stats?.pr_elapsed_time ?? null }
+                cacheSet(prL1Key, prData, TTL_LEADERBOARD)
+                setUserPRCache(seg.id, athleteId, prData)
+              }
             }
           }
 
-          const athletePR = segDetail.athlete_segment_stats?.pr_elapsed_time ?? null
+          // Live Strava fetch: needed when core or PR still missing after all cache layers
+          if (!coreData || prData === null) {
+            if (stravaDetailFetches >= MAX_DETAIL_FETCHES) {
+              if (!coreData) return null               // can't score without KOM time
+              prData = { prElapsedTime: null }         // cap reached — proceed with null PR, retry next request
+            } else {
+              stravaDetailFetches++
+              try {
+                const detail = await stravaGet(`/segments/${seg.id}`, accessToken)
+                detail.translatedName = await translateToEnglish(detail.name)
+                coreData = extractCoreFields(detail)
+                prData   = { prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null }
+                cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
+                cacheSet(prL1Key,   prData,   TTL_LEADERBOARD)
+                setSharedSegmentCache(seg.id, coreData)
+                setUserPRCache(seg.id, athleteId, prData)
+              } catch (fetchErr) {
+                cacheSet(failKey, true, 5 * 60)
+                context.warn(`Failed to score segment ${seg.id}:`, fetchErr.message)
+                return null
+              }
+            }
+          }
+
+          const athletePR = prData.prElapsedTime
 
           let targetTime, userPR
           if (targetType === 'personal_best') {
@@ -267,7 +304,7 @@ app.http('segments', {
             targetTime = athletePR
             userPR = athletePR
           } else {
-            const komTime = parseXomTime(athleteSex === 'F' ? segDetail.xoms?.qom : segDetail.xoms?.kom)
+            const komTime = athleteSex === 'F' ? coreData.qomTime : coreData.komTime
             if (!komTime) return null
             targetTime = komTime
             userPR = athletePR
@@ -285,10 +322,10 @@ app.http('segments', {
             score = (requiredPaceSecsPerMeter - userPRPace) / requiredPaceSecsPerMeter
           }
 
-          const startLat = segDetail.start_latlng?.[0] ?? seg.start_latlng?.[0] ?? null
-          const startLng = segDetail.start_latlng?.[1] ?? seg.start_latlng?.[1] ?? null
-          const endLat = segDetail.end_latlng?.[0] ?? seg.end_latlng?.[0] ?? null
-          const endLng = segDetail.end_latlng?.[1] ?? seg.end_latlng?.[1] ?? null
+          const startLat = seg.start_latlng?.[0] ?? null
+          const startLng = seg.start_latlng?.[1] ?? null
+          const endLat = seg.end_latlng?.[0] ?? null
+          const endLng = seg.end_latlng?.[1] ?? null
           const midpointLat = startLat != null ? (startLat + (endLat ?? startLat)) / 2 : 0
           const midpointLng = startLng != null ? (startLng + (endLng ?? startLng)) / 2 : 0
 
@@ -297,13 +334,13 @@ app.http('segments', {
           // Only check L1 — L2 reads per-segment would add too much latency to the bulk endpoint.
           // Elevation loss becomes accurate once the user visits a segment detail page (L1 warms from segmentElevation endpoint).
           const eleCache = cacheGet(`elevation:${seg.id}`)
-          const elevationGain = segDetail.total_elevation_gain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0))
+          const elevationGain = coreData.elevationGain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0))
           const elevationLoss = eleCache?.loss ?? 0
 
           return {
             id: seg.id,
             name: seg.name,
-            translatedName: segDetail.translatedName ?? null,
+            translatedName: coreData.translatedName,
             distance: segDistance,
             elevationGain,
             elevationLoss,
@@ -317,10 +354,10 @@ app.http('segments', {
             state: seg.state ?? null,
             midpointLat,
             midpointLng,
-            polyline: segDetail.map?.polyline ?? null,
+            polyline: coreData.polyline,
             startLatlng: startLat != null && startLng != null ? [startLat, startLng] : null,
             endLatlng: endLat != null && endLng != null ? [endLat, endLng] : null,
-            starred: segDetail.starred ?? false,
+            starred: false,
           }
         } catch (err) {
           context.warn(`Failed to score segment ${seg.id}:`, err.message)
