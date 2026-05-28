@@ -12,6 +12,19 @@ import shadowUrl from 'leaflet/dist/images/marker-shadow.png'
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl })
 
+// Prevent browser pinch-to-zoom (trackpad pinch and Ctrl+scroll both arrive as
+// wheel+ctrlKey on desktop). Leaflet zooms via plain wheel events without ctrlKey,
+// so the map is unaffected. touchmove covers mobile.
+document.addEventListener('wheel', (e) => {
+  if (e.ctrlKey) e.preventDefault()
+}, { passive: false })
+document.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 1) e.preventDefault()
+}, { passive: false })
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '=')) e.preventDefault()
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

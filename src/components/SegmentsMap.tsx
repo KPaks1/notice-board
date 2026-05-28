@@ -32,6 +32,12 @@ function MapReadyCallback({ onMapReady }: { onMapReady: (map: L.Map) => void }) 
   return null
 }
 
+function RemoveZoomControl() {
+  const map = useMap()
+  useEffect(() => { map.zoomControl?.remove() }, [map])
+  return null
+}
+
 // Calls invalidateSize when the map container is revealed after being hidden (display:none).
 function MapInvalidator() {
   const map = useMap()
@@ -108,6 +114,7 @@ export default function SegmentsMap({ segments, userLat, userLng, hoveredSegment
       key={`${userLat},${userLng}`}
       center={[userLat, userLng]}
       zoom={13}
+      zoomControl={false}
       style={{ height: '100%', width: '100%' }}
     >
       <TileLayer
@@ -115,6 +122,7 @@ export default function SegmentsMap({ segments, userLat, userLng, hoveredSegment
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
       <MapInvalidator />
+      <RemoveZoomControl />
       {onMapReady && <MapReadyCallback onMapReady={onMapReady} />}
       <Marker position={[userLat, userLng]} />
       {segments.map((seg) => (

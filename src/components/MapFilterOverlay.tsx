@@ -35,9 +35,20 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
 
   return (
     <>
-      <div ref={containerRef} className="absolute bottom-4 right-4 z-[1003] flex flex-col items-end gap-2">
+      <div ref={containerRef} className="relative">
+        <MapButton
+          onClick={() => setOpen(!open)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-lg transition-colors ${
+            open
+              ? 'bg-strava text-white'
+              : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+          }`}
+        >
+          <SlidersHorizontal size={15} />
+          <span className="text-xs font-medium tabular-nums">{segmentCount}</span>
+        </MapButton>
         {open && (
-          <div ref={preventZoom} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 w-72 shadow-xl space-y-5">
+          <div ref={preventZoom} className="absolute top-full left-0 mt-1 bg-gray-900 border border-gray-800 rounded-2xl p-4 w-72 shadow-xl space-y-5 z-10">
 
             <div>
               <span className="text-xs font-semibold text-white">Beat Target</span>
@@ -133,18 +144,6 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
 
           </div>
         )}
-
-        <MapButton
-          onClick={() => setOpen(!open)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-lg transition-colors ${
-            open
-              ? 'bg-strava text-white'
-              : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
-          }`}
-        >
-          <SlidersHorizontal size={15} />
-          <span className="text-xs font-medium tabular-nums">{segmentCount}</span>
-        </MapButton>
       </div>
     </>
   )

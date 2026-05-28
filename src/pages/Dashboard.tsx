@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUp, List, LocateFixed, Map, RefreshCw } from 'lucide-react'
+import { ArrowUp, List, LocateFixed, Map, Minus, Plus, RefreshCw } from 'lucide-react'
 import L from 'leaflet'
 import { useLocation } from '../hooks/useLocation'
 import { useSegments } from '../hooks/useSegments'
@@ -327,20 +327,38 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                 onSegmentHover={handleHoverSegment}
                 onMapReady={(m) => { segMapRef.current = m }}
               />
-              <MapButton
-                onClick={() => segMapRef.current?.setView([coords.lat, coords.lng], 13)}
-                className="absolute top-4 right-4 z-[1003] p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-blue-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
-                aria-label="Recentre on my location"
-              >
-                <LocateFixed size={16} />
-              </MapButton>
-              <MapFilterOverlay
-                settings={settings}
-                onChange={setSettings}
-                segmentDistanceRange={segmentDistanceRange}
-                segmentElevationRange={segmentElevationRange}
-                segmentCount={settings.mode === 'hunt' ? segmentCounts.hunt : segmentCounts.harvest}
-              />
+              <div className="absolute top-2 left-2 z-[1003] flex items-start gap-1">
+                <div className="flex flex-col gap-1">
+                  <MapButton
+                    onClick={() => segMapRef.current?.zoomIn()}
+                    className="p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
+                    aria-label="Zoom in"
+                  >
+                    <Plus size={16} />
+                  </MapButton>
+                  <MapButton
+                    onClick={() => segMapRef.current?.zoomOut()}
+                    className="p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
+                    aria-label="Zoom out"
+                  >
+                    <Minus size={16} />
+                  </MapButton>
+                  <MapButton
+                    onClick={() => segMapRef.current?.setView([coords.lat, coords.lng], 13)}
+                    className="p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-blue-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
+                    aria-label="Recentre on my location"
+                  >
+                    <LocateFixed size={16} />
+                  </MapButton>
+                </div>
+                <MapFilterOverlay
+                  settings={settings}
+                  onChange={setSettings}
+                  segmentDistanceRange={segmentDistanceRange}
+                  segmentElevationRange={segmentElevationRange}
+                  segmentCount={settings.mode === 'hunt' ? segmentCounts.hunt : segmentCounts.harvest}
+                />
+              </div>
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center text-gray-500 text-sm">
