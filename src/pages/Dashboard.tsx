@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUp, List, LocateFixed, Map, Minus, Plus, RefreshCw } from 'lucide-react'
+import { ArrowUp, List, LocateFixed, Map, Minus, Plus, RefreshCw, User, X } from 'lucide-react'
 import L from 'leaflet'
 import { useLocation } from '../hooks/useLocation'
 import { useSegments } from '../hooks/useSegments'
@@ -60,6 +60,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const listRef = useRef<HTMLDivElement>(null)
   const segMapRef = useRef<L.Map | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [roadDistances, setRoadDistances] = useState<Record<number, number>>({})
   const [hoveredSegmentId, setHoveredSegmentId] = useState<number | null>(null)
   const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -209,31 +210,38 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           </div>
         </div>
 
-        {/* Desktop inline nav — absolutely centered so it doesn't shift when right-side controls appear/disappear */}
-        <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
-          <DesktopTabButton active={tab === 'board'} onClick={() => setTab('board')} label="Board" />
-          <DesktopTabButton active={tab === 'profile'}   onClick={() => setTab('profile')}   label="Profile"   />
-        </nav>
 
-        {tab === 'board' && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-              className="md:hidden p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-              aria-label={viewMode === 'list' ? 'Switch to map' : 'Switch to list'}
-            >
-              {viewMode === 'list' ? <Map size={18} /> : <List size={18} />}
-            </button>
-            <button
-              onClick={refresh}
-              disabled={loading || !coords}
-              className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition-colors"
-              aria-label="Refresh"
-            >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {tab === 'board' && (
+            <>
+              <button
+                onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+                className="md:hidden p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                aria-label={viewMode === 'list' ? 'Switch to map' : 'Switch to list'}
+              >
+                {viewMode === 'list' ? <Map size={18} /> : <List size={18} />}
+              </button>
+              <button
+                onClick={refresh}
+                disabled={loading || !coords}
+                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition-colors"
+                aria-label="Refresh"
+              >
+                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="hidden md:flex items-center justify-center w-8 h-8 rounded-full overflow-hidden border-2 border-gray-700 hover:border-strava transition-colors shrink-0"
+            aria-label="Profile"
+          >
+            {stravaStatus.athletePhoto
+              ? <img src={stravaStatus.athletePhoto} alt="Profile" className="w-full h-full object-cover" />
+              : <User size={15} className="text-gray-400" />
+            }
+          </button>
+        </div>
       </header>
 
       {/* All panels always mounted — CSS show/hide avoids remounting Leaflet and form state */}
@@ -398,6 +406,29 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       >
         <ArrowUp size={18} />
       </button>
+
+      {/* Desktop profile slide-out panel */}
+      {profileOpen && (
+        <div
+          className="hidden md:block fixed inset-0 bg-black/50 z-[1999]"
+          onClick={() => setProfileOpen(false)}
+        />
+      )}
+      <div className={`hidden md:flex fixed inset-y-0 right-0 w-[420px] flex-col bg-gray-950 border-l border-gray-800 z-[2000] transition-transform duration-300 ease-in-out ${profileOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 shrink-0">
+          <h2 className="text-sm font-semibold text-white">Profile</h2>
+          <button
+            onClick={() => setProfileOpen(false)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            aria-label="Close profile"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4">
+          <ProfilePage stravaStatus={stravaStatus} unit={settings.unit} />
+        </div>
+      </div>
 
       <nav className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 z-[1001]">
         <div className="flex">
