@@ -57,18 +57,6 @@ function targetLabel(targetType) {
   return targetType === 'personal_best' ? 'Your Best' : 'CR'
 }
 
-async function mapWithConcurrency(arr, limit, fn) {
-  const results = new Array(arr.length)
-  let next = 0
-  async function worker() {
-    while (next < arr.length) {
-      const i = next++
-      results[i] = await fn(arr[i], i)
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, arr.length) }, worker))
-  return results
-}
 
 app.http('segments', {
   methods: ['GET'],
@@ -80,23 +68,35 @@ app.http('segments', {
       return { status: 401, jsonBody: { error: 'Not authenticated' } }
     }
 
-    const tokenData = await getValidToken(athleteId)
-    if (!tokenData) {
-      return { status: 403, jsonBody: { error: 'Strava not connected' } }
-    }
-    const { accessToken, athleteSex, bestEfforts } = tokenData
-
     const lat = parseFloat(request.query.get('lat') ?? '')
     const lng = parseFloat(request.query.get('lng') ?? '')
     const activityType = request.query.get('activityType') ?? 'running'
     const targetType = request.query.get('targetType') ?? 'kom'
     const sortBy = request.query.get('sortBy') ?? 'score'
-
     const radiusKm = Math.min(parseFloat(request.query.get('radiusKm') ?? '5'), 20)
 
     if (isNaN(lat) || isNaN(lng)) {
       return { status: 400, jsonBody: { error: 'lat and lng are required' } }
     }
+
+    // Token validation and pool load are independent — run in parallel
+    const poolL1Key = `pool:${athleteId}:${activityType}`
+    const poolL1 = cacheGet(poolL1Key)
+    const [tokenData, poolDataRaw] = await Promise.all([
+      getValidToken(athleteId),
+      poolL1 ? Promise.resolve(poolL1) : getSegmentPool(athleteId, activityType).catch((err) => {
+        context.warn('Could not load segment pool:', err.message)
+        return { segments: [], updatedAt: 0, coveredTiles: [] }
+      }),
+    ])
+
+    if (!tokenData) {
+      return { status: 403, jsonBody: { error: 'Strava not connected' } }
+    }
+    const { accessToken, athleteSex, bestEfforts } = tokenData
+
+    let poolData = poolL1 ?? poolDataRaw
+    if (!poolL1) cacheSet(poolL1Key, poolData, TTL_EXPLORE)
 
     const stravaActivityType = activityType === 'cycling' ? 'riding' : 'running'
 
@@ -112,19 +112,6 @@ app.http('segments', {
       city: s.city ?? null,
       state: s.state ?? null,
     })
-
-    // Load pool from L1 (warm) or L2 (cold start)
-    const poolL1Key = `pool:${athleteId}:${activityType}`
-    let poolData = cacheGet(poolL1Key)
-    if (!poolData) {
-      try {
-        poolData = await getSegmentPool(athleteId, activityType)
-        cacheSet(poolL1Key, poolData, TTL_EXPLORE)
-      } catch (err) {
-        context.warn('Could not load segment pool:', err.message)
-        poolData = { segments: [], updatedAt: 0, coveredTiles: [] }
-      }
-    }
 
     const poolById = new Map(poolData.segments.map((s) => [s.id, s]))
     const poolAgeMs = Date.now() - poolData.updatedAt
@@ -195,7 +182,7 @@ app.http('segments', {
       return haversineKm(lat, lng, sLat, sLng) <= MAX_POOL_DISTANCE_KM
     })
     if (allSegments.length === 0) {
-      return { jsonBody: [] }
+      return { body: new ReadableStream({ start(c) { c.close() } }), headers: { 'Content-Type': 'application/x-ndjson' } }
     }
 
     // Pre-sort pool in scoring priority order so cold-start Strava fetch slots go to the most relevant segments
@@ -210,10 +197,12 @@ app.http('segments', {
       })
     }
 
-    // Fall back to Strava recent stats if best efforts not yet computed
+    const effortList = activityType === 'cycling' ? bestEfforts?.ride : bestEfforts?.run
+
+    // Only fetch Strava stats when we have no effort data to score with
     const statsKey = `stats:${athleteId}:${activityType}`
     let statsUserPace = cacheGet(statsKey)
-    if (statsUserPace === null) {
+    if (statsUserPace === null && (!effortList || effortList.length === 0)) {
       try {
         const stats = await stravaGet(`/athletes/${athleteId}/stats`, accessToken)
         const totals = activityType === 'cycling'
@@ -227,167 +216,156 @@ app.http('segments', {
         context.warn('Could not fetch athlete stats:', err.message)
       }
     }
-    const effortList = activityType === 'cycling' ? bestEfforts?.ride : bestEfforts?.run
 
-    // Limit live Strava fetches per request — uncached segments are skipped and filled in
-    // on subsequent requests as L2 warms up, preventing rate limit bursts on cold starts
-    let stravaDetailFetches = 0
     const MAX_DETAIL_FETCHES = 10
+    const encoder = new TextEncoder()
 
-    const scored = await mapWithConcurrency(allSegments, 5, async (seg) => {
-        try {
+    const buildResult = (seg, coreData, prData) => {
+      const athletePR = prData.prElapsedTime
+      let targetTime, userPR
+      if (targetType === 'personal_best') {
+        if (!athletePR) return null
+        targetTime = athletePR
+        userPR = athletePR
+      } else {
+        const komTime = athleteSex === 'F' ? coreData.qomTime : coreData.komTime
+        if (!komTime) return null
+        targetTime = komTime
+        userPR = athletePR
+      }
+      const segDistance = seg.distance
+      const requiredPaceSecsPerMeter = (targetTime - 1) / segDistance
+      const userPaceSecsPerMeter = bestEffortPaceForDistance(effortList, segDistance) ?? statsUserPace
+      let score = -1
+      if (userPaceSecsPerMeter !== null) {
+        score = (requiredPaceSecsPerMeter - userPaceSecsPerMeter) / requiredPaceSecsPerMeter
+      } else if (userPR) {
+        const userPRPace = userPR / segDistance
+        score = (requiredPaceSecsPerMeter - userPRPace) / requiredPaceSecsPerMeter
+      }
+      const startLat = seg.start_latlng?.[0] ?? null
+      const startLng = seg.start_latlng?.[1] ?? null
+      const endLat   = seg.end_latlng?.[0] ?? null
+      const endLng   = seg.end_latlng?.[1] ?? null
+      const eleCache = cacheGet(`elevation:${seg.id}`)
+      return {
+        id: seg.id,
+        name: seg.name,
+        translatedName: coreData.translatedName,
+        distance: segDistance,
+        elevationGain: coreData.elevationGain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0)),
+        elevationLoss: eleCache?.loss ?? 0,
+        activityType: seg.activity_type,
+        score,
+        targetTime,
+        userPR,
+        estimatedTime: estimateTimeForDistance(effortList, segDistance),
+        targetLabel: targetLabel(targetType),
+        city: seg.city ?? null,
+        state: seg.state ?? null,
+        midpointLat: startLat != null ? (startLat + (endLat ?? startLat)) / 2 : 0,
+        midpointLng: startLng != null ? (startLng + (endLng ?? startLng)) / 2 : 0,
+        polyline: coreData.polyline,
+        startLatlng: startLat != null && startLng != null ? [startLat, startLng] : null,
+        endLatlng: endLat != null && endLng != null ? [endLat, endLng] : null,
+        starred: false,
+      }
+    }
+
+    const body = new ReadableStream({
+      async start(controller) {
+        const enqueue = (result) => {
+          try { controller.enqueue(encoder.encode(JSON.stringify(result) + '\n')) } catch {}
+        }
+
+        // Phase 0: L1 (in-memory) — synchronous, zero async wait, streams before any I/O
+        const needsL2 = []
+        for (const seg of allSegments) {
+          if (cacheGet(`seg:${seg.id}:${athleteId}:fail`)) continue
+          const coreData = cacheGet(`segCore:${seg.id}`)
+          const prData   = cacheGet(`segPr:${seg.id}:${athleteId}`)
+          if (coreData && prData !== null) {
+            const result = buildResult(seg, coreData, prData)
+            if (result) enqueue(result)
+          } else {
+            needsL2.push(seg)
+          }
+        }
+
+        if (needsL2.length === 0) { controller.close(); return }
+
+        // Phase 1: each segment fires its two L2 reads concurrently and streams the moment both resolve
+        const needsFetch = []
+        await Promise.all(needsL2.map(async (seg) => {
           const coreL1Key = `segCore:${seg.id}`
           const prL1Key   = `segPr:${seg.id}:${athleteId}`
-          const failKey   = `seg:${seg.id}:${athleteId}:fail`
-          if (cacheGet(failKey)) return null
+          try {
+            let [coreData, prData] = await Promise.all([
+              getSharedSegmentCache(seg.id),
+              getUserPRCache(seg.id, athleteId),
+            ])
 
-          // Shared core: L1 → L2
-          let coreData = cacheGet(coreL1Key)
-          if (!coreData) {
-            coreData = await getSharedSegmentCache(seg.id)
             if (coreData) cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
-          }
-
-          // User PR: L1 → L2 (null = cache miss, object = hit even if prElapsedTime is null)
-          let prData = cacheGet(prL1Key)
-          if (prData === null) {
-            prData = await getUserPRCache(seg.id, athleteId)
             if (prData !== null) cacheSet(prL1Key, prData, TTL_LEADERBOARD)
-          }
 
-          // Legacy per-user segCache: promote to new partitions on first read, avoids re-fetch during warm-up
-          if (!coreData || prData === null) {
-            const legacy = await getSegmentCache(seg.id, athleteId)
-            if (legacy) {
-              if (!coreData) {
-                coreData = extractCoreFields(legacy)
-                cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
-                setSharedSegmentCache(seg.id, coreData)
-              }
-              if (prData === null) {
-                prData = { prElapsedTime: legacy.athlete_segment_stats?.pr_elapsed_time ?? null }
-                cacheSet(prL1Key, prData, TTL_LEADERBOARD)
-                setUserPRCache(seg.id, athleteId, prData)
+            // Legacy promotion: migrate old segCache format to new partitions
+            if (!coreData || prData === null) {
+              const legacy = await getSegmentCache(seg.id, athleteId)
+              if (legacy) {
+                if (!coreData) {
+                  coreData = extractCoreFields(legacy)
+                  cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
+                  setSharedSegmentCache(seg.id, coreData)
+                }
+                if (prData === null) {
+                  prData = { prElapsedTime: legacy.athlete_segment_stats?.pr_elapsed_time ?? null }
+                  cacheSet(prL1Key, prData, TTL_LEADERBOARD)
+                  setUserPRCache(seg.id, athleteId, prData)
+                }
               }
             }
+
+            if (!coreData) { needsFetch.push(seg); return }
+            if (prData === null) prData = { prElapsedTime: null }
+
+            const result = buildResult(seg, coreData, prData)
+            if (result) enqueue(result)
+          } catch (err) {
+            context.warn(`Failed to score segment ${seg.id}:`, err.message)
           }
+        }))
 
-          // Live Strava fetch: only needed when coreData is missing — PR is captured opportunistically
-          if (!coreData) {
-            if (stravaDetailFetches >= MAX_DETAIL_FETCHES) return null
-            stravaDetailFetches++
-            try {
-              const detail = await stravaGet(`/segments/${seg.id}`, accessToken)
-              detail.translatedName = await translateToEnglish(detail.name)
-              coreData = extractCoreFields(detail)
-              prData   = { prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null }
-              cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
-              cacheSet(prL1Key,   prData,   TTL_LEADERBOARD)
-              setSharedSegmentCache(seg.id, coreData)
-              setUserPRCache(seg.id, athleteId, prData)
-            } catch (fetchErr) {
-              cacheSet(failKey, true, 5 * 60)
-              context.warn(`Failed to score segment ${seg.id}:`, fetchErr.message)
-              return null
-            }
-          } else if (prData === null) {
-            prData = { prElapsedTime: null }
-          }
+        if (needsFetch.length === 0) { controller.close(); return }
 
-          const athletePR = prData.prElapsedTime
-
-          let targetTime, userPR
-          if (targetType === 'personal_best') {
-            if (!athletePR) return null
-            targetTime = athletePR
-            userPR = athletePR
-          } else {
-            const komTime = athleteSex === 'F' ? coreData.qomTime : coreData.komTime
-            if (!komTime) return null
-            targetTime = komTime
-            userPR = athletePR
-          }
-
-          const segDistance = seg.distance
-          const requiredPaceSecsPerMeter = (targetTime - 1) / segDistance
-          const userPaceSecsPerMeter = bestEffortPaceForDistance(effortList, segDistance) ?? statsUserPace
-
-          let score = -1
-          if (userPaceSecsPerMeter !== null) {
-            score = (requiredPaceSecsPerMeter - userPaceSecsPerMeter) / requiredPaceSecsPerMeter
-          } else if (userPR) {
-            const userPRPace = userPR / segDistance
-            score = (requiredPaceSecsPerMeter - userPRPace) / requiredPaceSecsPerMeter
-          }
-
-          const startLat = seg.start_latlng?.[0] ?? null
-          const startLng = seg.start_latlng?.[1] ?? null
-          const endLat = seg.end_latlng?.[0] ?? null
-          const endLng = seg.end_latlng?.[1] ?? null
-          const midpointLat = startLat != null ? (startLat + (endLat ?? startLat)) / 2 : 0
-          const midpointLng = startLng != null ? (startLng + (endLng ?? startLng)) / 2 : 0
-
-          const estimatedTime = estimateTimeForDistance(effortList, segDistance)
-
-          // Only check L1 — L2 reads per-segment would add too much latency to the bulk endpoint.
-          // Elevation loss becomes accurate once the user visits a segment detail page (L1 warms from segmentElevation endpoint).
-          const eleCache = cacheGet(`elevation:${seg.id}`)
-          const elevationGain = coreData.elevationGain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0))
-          const elevationLoss = eleCache?.loss ?? 0
-
-          return {
-            id: seg.id,
-            name: seg.name,
-            translatedName: coreData.translatedName,
-            distance: segDistance,
-            elevationGain,
-            elevationLoss,
-            activityType: seg.activity_type,
-            score,
-            targetTime,
-            userPR,
-            estimatedTime,
-            targetLabel: targetLabel(targetType),
-            city: seg.city ?? null,
-            state: seg.state ?? null,
-            midpointLat,
-            midpointLng,
-            polyline: coreData.polyline,
-            startLatlng: startLat != null && startLng != null ? [startLat, startLng] : null,
-            endLatlng: endLat != null && endLng != null ? [endLat, endLng] : null,
-            starred: false,
-          }
-        } catch (err) {
-          context.warn(`Failed to score segment ${seg.id}:`, err.message)
-          return null
-        }
-      })
-
-    const results = scored.filter(Boolean).sort((a, b) => b.score - a.score)
-
-    // Fire-and-forget: warm coreData for segments that didn't get a slot this request
-    const uncached = allSegments.filter((s) => !cacheGet(`segCore:${s.id}`))
-    if (uncached.length > 0) {
-      ;(async () => {
-        for (const seg of uncached) {
-          if (cacheGet(`segCore:${seg.id}`)) continue
+        // Phase 2: Strava fetches for uncached segments, throttled, stop on rate limit
+        let fetches = 0
+        for (const seg of needsFetch) {
+          if (fetches >= MAX_DETAIL_FETCHES) break
+          if (cacheGet(`seg:${seg.id}:${athleteId}:fail`)) continue
+          fetches++
           try {
             const detail = await stravaGet(`/segments/${seg.id}`, accessToken)
             detail.translatedName = await translateToEnglish(detail.name)
-            const core = extractCoreFields(detail)
-            const pr   = { prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null }
-            cacheSet(`segCore:${seg.id}`, core, TTL_LEADERBOARD)
-            cacheSet(`segPr:${seg.id}:${athleteId}`, pr, TTL_LEADERBOARD)
-            setSharedSegmentCache(seg.id, core)
-            setUserPRCache(seg.id, athleteId, pr)
+            const coreData = extractCoreFields(detail)
+            const prData   = { prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null }
+            cacheSet(`segCore:${seg.id}`, coreData, TTL_LEADERBOARD)
+            cacheSet(`segPr:${seg.id}:${athleteId}`, prData, TTL_LEADERBOARD)
+            setSharedSegmentCache(seg.id, coreData)
+            setUserPRCache(seg.id, athleteId, prData)
+            const result = buildResult(seg, coreData, prData)
+            if (result) enqueue(result)
             await new Promise((r) => setTimeout(r, 600))
-          } catch {
-            break
+          } catch (err) {
+            if (err instanceof StravaError && err.status === 429) break
+            cacheSet(`seg:${seg.id}:${athleteId}:fail`, true, 5 * 60)
+            context.warn(`Failed to score segment ${seg.id}:`, err.message)
           }
         }
-      })()
-    }
 
-    return { jsonBody: results }
+        controller.close()
+      },
+    })
+
+    return { body, headers: { 'Content-Type': 'application/x-ndjson', 'Cache-Control': 'no-cache' } }
   },
 })

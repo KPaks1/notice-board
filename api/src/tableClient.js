@@ -205,6 +205,46 @@ export async function getSharedSegmentCache(segId) {
   }
 }
 
+export async function batchGetSharedSegmentCache(segIds) {
+  if (segIds.length === 0) return new Map()
+  const client = getClient()
+  const now = Date.now()
+  const entries = await Promise.all(
+    segIds.map(async (id) => {
+      try {
+        const entity = await client.getEntity('segCore', String(id))
+        if (!entity.cachedAt) return null
+        if (now - new Date(entity.cachedAt).getTime() > SEGMENT_CACHE_TTL_MS) return null
+        return entity.data ? [id, decompress(entity.data)] : null
+      } catch (err) {
+        if (err.statusCode === 404) return null
+        return null
+      }
+    }),
+  )
+  return new Map(entries.filter(Boolean))
+}
+
+export async function batchGetUserPRCache(segIds, athleteId) {
+  if (segIds.length === 0) return new Map()
+  const client = getClient()
+  const now = Date.now()
+  const entries = await Promise.all(
+    segIds.map(async (id) => {
+      try {
+        const entity = await client.getEntity('segPr', `${id}:${athleteId}`)
+        if (!entity.cachedAt) return null
+        if (now - new Date(entity.cachedAt).getTime() > SEGMENT_CACHE_TTL_MS) return null
+        return entity.data ? [id, decompress(entity.data)] : null
+      } catch (err) {
+        if (err.statusCode === 404) return null
+        return null
+      }
+    }),
+  )
+  return new Map(entries.filter(Boolean))
+}
+
 export async function setSharedSegmentCache(segId, data) {
   const client = await getClientReady()
   await client.upsertEntity(

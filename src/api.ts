@@ -50,7 +50,9 @@ export async function fetchSegments(
   activityType: string,
   radiusKm: number,
   sortBy: string,
-): Promise<ScoredSegment[]> {
+  onSegment: (segment: ScoredSegment) => void,
+  signal?: AbortSignal,
+): Promise<void> {
   const params = new URLSearchParams({
     lat: String(lat),
     lng: String(lng),
@@ -58,13 +60,27 @@ export async function fetchSegments(
     radiusKm: String(radiusKm),
     sortBy,
   })
-  const res = await fetch(`/api/segments?${params}`, { headers: authHeaders() })
+  const res = await fetch(`/api/segments?${params}`, { headers: authHeaders(), signal })
   if (res.status === 429) throw new RateLimitError(parseRetryAfter(res))
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.error ?? 'Failed to fetch segments')
   }
-  return res.json()
+  const reader = res.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) {
+      if (line.trim()) {
+        try { onSegment(JSON.parse(line)) } catch {}
+      }
+    }
+  }
 }
 
 export async function resetSegmentPool(activityType: string): Promise<void> {

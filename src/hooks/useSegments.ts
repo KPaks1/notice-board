@@ -27,6 +27,7 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
   // Read sortBy at call time so changing sort re-orders client-side without triggering a refetch
   const sortByRef = useRef(sortBy)
   sortByRef.current = sortBy
+  const abortRef = useRef<AbortController | null>(null)
 
   const debouncedRadiusKm = useDebounce(radiusKm, 800)
 
@@ -40,12 +41,28 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
   const refresh = useCallback(async () => {
     const c = coordsRef.current
     if (!c) return
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
     setError(null)
     try {
-      setAllSegments(await fetchSegments(c.lat, c.lng, activityType, debouncedRadiusKm, sortByRef.current))
+      await fetchSegments(
+        c.lat, c.lng, activityType, debouncedRadiusKm, sortByRef.current,
+        (segment) => setAllSegments((prev) => {
+          const idx = prev.findIndex((s) => s.id === segment.id)
+          if (idx >= 0) {
+            const next = [...prev]
+            next[idx] = segment
+            return next
+          }
+          return [...prev, segment]
+        }),
+        controller.signal,
+      )
       setRateLimitedUntil(null)
     } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return
       if (e instanceof RateLimitError) {
         setRateLimitedUntil(Date.now() + e.retryAfter * 1000)
       }
@@ -68,10 +85,11 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
 
   useEffect(() => {
     if (!fetchKey) return
-    if (prevFetchKey.current === fetchKey && allSegments.length > 0) return
+    if (prevFetchKey.current === fetchKey) return
     prevFetchKey.current = fetchKey
+    setAllSegments([])
     refresh()
-  }, [fetchKey, refresh, allSegments.length])
+  }, [fetchKey, refresh])
 
   return { allSegments, loading, error, refresh, rateLimitedUntil }
 }
