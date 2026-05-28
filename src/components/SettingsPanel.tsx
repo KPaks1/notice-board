@@ -145,7 +145,7 @@ export default function SettingsPanel({ settings, onChange, onResetPool, segment
           </div>
         </div>
 
-        <div>
+        <div className="md:hidden">
           <p className="text-sm font-semibold text-white mb-3">Beat Target</p>
           <div className="space-y-2">
             {(['kom', 'personal_best'] as const).map((value) => (

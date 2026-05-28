@@ -330,6 +330,13 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
               <div className="absolute top-2 left-2 z-[1003] flex items-start gap-1">
                 <div className="flex flex-col gap-1">
                   <MapButton
+                    onClick={() => segMapRef.current?.setView([coords.lat, coords.lng], 13)}
+                    className="p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-blue-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
+                    aria-label="Recentre on my location"
+                  >
+                    <LocateFixed size={16} />
+                  </MapButton>
+                  <MapButton
                     onClick={() => segMapRef.current?.zoomIn()}
                     className="p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
                     aria-label="Zoom in"
@@ -342,13 +349,6 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                     aria-label="Zoom out"
                   >
                     <Minus size={16} />
-                  </MapButton>
-                  <MapButton
-                    onClick={() => segMapRef.current?.setView([coords.lat, coords.lng], 13)}
-                    className="p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-blue-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
-                    aria-label="Recentre on my location"
-                  >
-                    <LocateFixed size={16} />
                   </MapButton>
                 </div>
                 <MapFilterOverlay
@@ -448,7 +448,7 @@ function DesktopTabButton({
     <button
       onClick={onClick}
       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-        active ? 'bg-gray-800 text-strava' : 'text-gray-400 hover:text-white hover:bg-gray-800'
+        active ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'
       }`}
     >
       {label}

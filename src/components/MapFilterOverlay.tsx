@@ -41,7 +41,7 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-lg transition-colors ${
             open
               ? 'bg-strava text-white'
-              : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+              : 'bg-gray-900/90 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800'
           }`}
         >
           <SlidersHorizontal size={15} />
