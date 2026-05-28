@@ -6,7 +6,7 @@ interface Coords {
   lng: number
 }
 
-const CACHE_KEY = 'eviction-notice-location'
+const CACHE_KEY = 'notice-board-location'
 // Only update coords (and trigger potential re-fetches) if user moved this far
 const MOVE_THRESHOLD_KM = 0.5
 

@@ -18,7 +18,7 @@ import MapFilterOverlay from '../components/MapFilterOverlay'
 import ProfilePage from './ProfilePage'
 import poweredByStrava from '../assets/strava/powered-by/api_logo_pwrdBy_strava_horiz_white.svg'
 
-const SETTINGS_KEY = 'eviction-notice-settings'
+const SETTINGS_KEY = 'notice-board-settings'
 
 function getDefaultSettings(status: StravaStatus): Settings {
   return {
@@ -47,12 +47,12 @@ function loadSettings(status: StravaStatus): Settings {
 }
 
 
-type Tab = 'evictions' | 'settings' | 'profile'
+type Tab = 'board' | 'settings' | 'profile'
 
 export default function Dashboard({ stravaStatus: initialStravaStatus }: { stravaStatus: StravaStatus }) {
   const navigate = useNavigate()
   const stravaStatus = initialStravaStatus
-  const [tab, setTab] = useState<Tab>('evictions')
+  const [tab, setTab] = useState<Tab>('board')
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [settings, setSettings] = useState<Settings>(() => loadSettings(stravaStatus))
   const { coords, error: locError } = useLocation()
@@ -180,7 +180,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   }, [scoredPool, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.minElevationChange, settings.maxElevationChange, settings.mode, settings.sortBy])
 
   const displayError = locError ?? error
-  const isMapMode = tab === 'evictions' && viewMode === 'map'
+  const isMapMode = tab === 'board' && viewMode === 'map'
 
   const mapClickHandler = (id: number) =>
     navigate(`/segment/${id}`, {
@@ -196,7 +196,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     <div className="h-screen bg-gray-950 flex flex-col max-w-lg mx-auto sm:rounded-2xl sm:overflow-hidden sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10 md:max-w-none md:rounded-none md:shadow-none md:ring-0">
       <header className="relative flex items-center justify-between px-4 pt-6 pb-4 md:px-6 md:pt-4 md:pb-3 md:border-b md:border-gray-800 shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">{APP_NAME}</h1>
+          <h1 className="text-xl font-black text-white tracking-tight uppercase -mb-1">{APP_NAME}</h1>
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Beatable segments, near you.</span>
           <div className="flex items-center gap-2 mt-0.5">
             {coords && (
               <p className="text-xs text-gray-500">
@@ -210,12 +211,12 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
         {/* Desktop inline nav — absolutely centered so it doesn't shift when right-side controls appear/disappear */}
         <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
-          <DesktopTabButton active={tab === 'evictions'} onClick={() => setTab('evictions')} label="Evictions" />
+          <DesktopTabButton active={tab === 'board'} onClick={() => setTab('board')} label="Board" />
           <DesktopTabButton active={tab === 'settings'}  onClick={() => setTab('settings')}  label="Settings"  />
           <DesktopTabButton active={tab === 'profile'}   onClick={() => setTab('profile')}   label="Profile"   />
         </nav>
 
-        {tab === 'evictions' && (
+        {tab === 'board' && (
           <div className="flex items-center gap-1">
             <button
               onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
@@ -241,8 +242,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
         {/* List panel */}
         <div className={[
-          tab === 'evictions' && viewMode === 'list' ? 'flex-1 flex flex-col' : 'hidden',
-          tab === 'evictions'
+          tab === 'board' && viewMode === 'list' ? 'flex-1 flex flex-col' : 'hidden',
+          tab === 'board'
             ? 'md:flex md:flex-col md:relative md:flex-none md:w-96 md:shrink-0 md:border-r md:border-gray-800'
             : 'md:hidden',
         ].join(' ')}>
@@ -312,8 +313,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
         {/* Map panel */}
         <div className={[
-          tab === 'evictions' && viewMode === 'map' ? 'flex-1 overflow-hidden pb-14 relative' : 'hidden',
-          tab === 'evictions' ? 'md:flex md:flex-1 md:pb-0 md:relative' : 'md:hidden',
+          tab === 'board' && viewMode === 'map' ? 'flex-1 overflow-hidden pb-14 relative' : 'hidden',
+          tab === 'board' ? 'md:flex md:flex-1 md:pb-0 md:relative' : 'md:hidden',
         ].join(' ')}>
           {coords ? (
             <>
@@ -350,7 +351,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
         {/* Settings / Profile panel */}
         <div className={
-          tab === 'evictions'
+          tab === 'board'
             ? 'hidden'
             : 'flex-1 overflow-y-auto no-scrollbar px-4 pb-28 md:pb-8 md:flex md:justify-center'
         }>
@@ -383,7 +384,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
       <nav className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 z-[1001]">
         <div className="flex">
-          <TabButton active={tab === 'evictions'} onClick={() => setTab('evictions')} icon="🎯" label="Evictions" />
+          <TabButton active={tab === 'board'} onClick={() => setTab('board')} icon="🎯" label="Board" />
           <TabButton active={tab === 'settings'}  onClick={() => setTab('settings')}  icon="⚙️" label="Settings"  />
           <TabButton active={tab === 'profile'}   onClick={() => setTab('profile')}   icon="👤" label="Profile"   />
         </div>

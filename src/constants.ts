@@ -1,1 +1,1 @@
-export const APP_NAME = 'Eviction Notice'
+export const APP_NAME = 'Notice Board'
