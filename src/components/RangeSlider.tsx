@@ -1,5 +1,71 @@
 import { useEffect, useRef } from 'react'
 
+interface SingleSliderProps {
+  min: number
+  max: number
+  step: number
+  value: number
+  onChange: (value: number) => void
+}
+
+export function SingleSlider({ min, max, step, value, onChange }: SingleSliderProps) {
+  const trackRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef(false)
+  const state = useRef({ min, max, step, value, onChange })
+  state.current = { min, max, step, value, onChange }
+
+  const pct = ((value - min) / ((max - min) || 1)) * 100
+
+  useEffect(() => {
+    const snap = (v: number) => Math.round(v / step) * step
+    const valueFromX = (clientX: number) => {
+      if (!trackRef.current) return state.current.min
+      const rect = trackRef.current.getBoundingClientRect()
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      const { min, max } = state.current
+      return snap(min + pct * (max - min))
+    }
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      if (!dragging.current) return
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+      state.current.onChange(valueFromX(clientX))
+    }
+    const onUp = () => { dragging.current = false }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    document.addEventListener('touchmove', onMove, { passive: false })
+    document.addEventListener('touchend', onUp)
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.removeEventListener('touchmove', onMove)
+      document.removeEventListener('touchend', onUp)
+    }
+  }, [])
+
+  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragging.current) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    const snap = (v: number) => Math.round(v / step) * step
+    state.current.onChange(snap(min + pct * (max - min)))
+  }
+
+  return (
+    <div ref={trackRef} className="relative h-5 mx-2 cursor-pointer select-none" onClick={handleTrackClick}>
+      <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1.5 rounded-full bg-gray-700 pointer-events-none" />
+      <div className="absolute top-1/2 -translate-y-1/2 left-0 h-1.5 rounded-full bg-strava pointer-events-none" style={{ right: `${100 - pct}%` }} />
+      <div
+        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-strava shadow-md cursor-grab active:cursor-grabbing hover:scale-110 transition-transform z-10"
+        style={{ left: `${pct}%` }}
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); dragging.current = true }}
+        onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); dragging.current = true }}
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  )
+}
+
 interface Props {
   min: number
   max: number

@@ -7,7 +7,7 @@ import { useSegments } from '../hooks/useSegments'
 import { formatRadius } from '../format'
 import type { Settings, ScoredSegment, SortBy, StravaStatus } from '../types'
 import { fetchRoadDistances } from '../osrm'
-import { resetSegmentPool } from '../api'
+
 import { APP_NAME } from '../constants'
 import { haversineKm } from '../geo'
 import EvictionsList from '../components/EvictionsList'
@@ -212,7 +212,6 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         {/* Desktop inline nav — absolutely centered so it doesn't shift when right-side controls appear/disappear */}
         <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
           <DesktopTabButton active={tab === 'board'} onClick={() => setTab('board')} label="Board" />
-          <DesktopTabButton active={tab === 'settings'}  onClick={() => setTab('settings')}  label="Settings"  />
           <DesktopTabButton active={tab === 'profile'}   onClick={() => setTab('profile')}   label="Profile"   />
         </nav>
 
@@ -378,7 +377,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
               <SettingsPanel
                 settings={settings}
                 onChange={setSettings}
-                onResetPool={async () => { await resetSegmentPool(settings.activityType); refresh() }}
+
                 segmentDistanceRange={segmentDistanceRange}
                 segmentElevationRange={segmentElevationRange}
                 segmentCounts={segmentCounts}
