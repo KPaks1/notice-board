@@ -464,24 +464,3 @@ function TabButton({
     </button>
   )
 }
-
-function DesktopTabButton({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean
-  onClick: () => void
-  label: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-        active ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'
-      }`}
-    >
-      {label}
-    </button>
-  )
-}
