@@ -40,6 +40,32 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
           <div ref={preventZoom} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 w-72 shadow-xl space-y-5">
 
             <div>
+              <span className="text-xs font-semibold text-white">Beat Target</span>
+              <div className="flex mt-2 bg-gray-800 rounded-lg p-0.5">
+                <button
+                  onClick={() => onChange({ ...settings, targetType: 'kom' })}
+                  className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${
+                    settings.targetType === 'kom'
+                      ? 'bg-strava text-white font-medium'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Course Record
+                </button>
+                <button
+                  onClick={() => onChange({ ...settings, targetType: 'personal_best' })}
+                  className={`flex-1 text-xs py-1.5 rounded-md transition-colors ${
+                    settings.targetType === 'personal_best'
+                      ? 'bg-strava text-white font-medium'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Personal Best
+                </button>
+              </div>
+            </div>
+
+            <div>
               <div className="flex justify-between items-baseline mb-2">
                 <span className="text-xs font-semibold text-white">Search Radius</span>
                 <span className="text-xs text-strava">{formatRadius(settings.radiusKm, u)}</span>

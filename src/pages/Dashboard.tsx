@@ -240,14 +240,16 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       <main className="flex-1 min-h-0 flex overflow-hidden">
 
         {/* List panel */}
-        <div
-          ref={listRef}
-          className={[
-            tab === 'evictions' && viewMode === 'list' ? 'flex-1 overflow-y-auto no-scrollbar' : 'hidden',
-            tab === 'evictions' ? 'md:block md:flex-none' : 'md:hidden',
-            'md:w-96 md:shrink-0 md:border-r md:border-gray-800 md:overflow-y-auto md:no-scrollbar',
-          ].join(' ')}
-        >
+        <div className={[
+          tab === 'evictions' && viewMode === 'list' ? 'flex-1 flex flex-col' : 'hidden',
+          tab === 'evictions'
+            ? 'md:flex md:flex-col md:relative md:flex-none md:w-96 md:shrink-0 md:border-r md:border-gray-800'
+            : 'md:hidden',
+        ].join(' ')}>
+          <div
+            ref={listRef}
+            className="flex-1 overflow-y-auto no-scrollbar"
+          >
           <div className="px-4 pb-28 md:px-4 md:pb-4 md:pt-4">
             <div className="flex gap-1 mb-2">
               {(['hunt', 'harvest'] as const).map((m) => (
@@ -295,6 +297,17 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
               onSwitchToKom={() => setSettings((s) => ({ ...s, targetType: 'kom' }))}
             />
           </div>
+          </div>
+
+          {/* Desktop back-to-top — anchored to list column */}
+          <button
+            onClick={() => listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            className={`hidden md:flex absolute bottom-4 right-4 z-[1005] items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800 border border-gray-700 text-white text-xs shadow-lg transition-opacity duration-300 ${showScrollTop ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            aria-label="Back to top"
+          >
+            <ArrowUp size={13} />
+            Back to top
+          </button>
         </div>
 
         {/* Map panel */}
@@ -359,9 +372,10 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         </div>
       </main>
 
+      {/* Mobile back-to-top */}
       <button
         onClick={() => listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-        className={`fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[1004] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`md:hidden fixed bottom-20 right-4 z-[1004] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         aria-label="Back to top"
       >
         <ArrowUp size={18} />

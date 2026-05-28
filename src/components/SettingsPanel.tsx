@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Settings, ActivityType, TargetType } from '../types'
+import type { Settings, ActivityType } from '../types'
 import { formatRadius, formatKm, formatElevation } from '../format'
 import RangeSlider from './RangeSlider'
 
@@ -11,11 +11,6 @@ interface Props {
   segmentElevationRange: { min: number; max: number } | null
   segmentCounts: { hunt: number; harvest: number }
 }
-
-const TARGET_OPTIONS: { value: TargetType; label: string }[] = [
-  { value: 'kom', label: 'Course Record' },
-  { value: 'personal_best', label: 'Personal Best' },
-]
 
 const ACTIVITY_OPTIONS: { value: ActivityType; label: string }[] = [
   { value: 'running', label: 'Running' },
@@ -153,21 +148,24 @@ export default function SettingsPanel({ settings, onChange, onResetPool, segment
         <div>
           <p className="text-sm font-semibold text-white mb-3">Beat Target</p>
           <div className="space-y-2">
-            {TARGET_OPTIONS.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+            {(['kom', 'personal_best'] as const).map((value) => (
+              <label key={value} className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="radio"
                   name="targetType"
-                  value={opt.value}
-                  checked={settings.targetType === opt.value}
-                  onChange={() => onChange({ ...settings, targetType: opt.value })}
+                  value={value}
+                  checked={settings.targetType === value}
+                  onChange={() => onChange({ ...settings, targetType: value })}
                   className="accent-strava"
                 />
-                <span className="text-sm text-gray-300">{opt.label}</span>
+                <span className="text-sm text-gray-300">
+                  {value === 'kom' ? 'Course Record' : 'Personal Best'}
+                </span>
               </label>
             ))}
           </div>
         </div>
+
       </div>
 
       <div className="md:hidden text-sm text-gray-400">
