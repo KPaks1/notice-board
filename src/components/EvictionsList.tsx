@@ -34,6 +34,8 @@ interface Props {
   roadDistances: Record<number, number>
   onHoverSegment?: (id: number | null) => void
   rateLimitedUntil?: number | null
+  targetType?: string
+  onSwitchToKom?: () => void
 }
 
 function useSecondsUntil(timestamp: number | null | undefined): number | null {
@@ -48,7 +50,7 @@ function useSecondsUntil(timestamp: number | null | undefined): number | null {
   return seconds
 }
 
-export default function EvictionsList({ segments, loading, error, onRefresh, mode, unit, userLat, userLng, roadDistances, onHoverSegment, rateLimitedUntil }: Props) {
+export default function EvictionsList({ segments, loading, error, onRefresh, mode, unit, userLat, userLng, roadDistances, onHoverSegment, rateLimitedUntil, targetType, onSwitchToKom }: Props) {
   const secondsLeft = useSecondsUntil(rateLimitedUntil)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -70,7 +72,7 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
     return () => observer.disconnect()
   }, [segments.length])
 
-  if (loading) {
+  if (loading && segments.length === 0) {
     return (
       <div className="space-y-3">
         {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} />)}
@@ -98,6 +100,25 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
   }
 
   if (segments.length === 0) {
+    if (targetType === 'personal_best') {
+      return (
+        <div className="text-center py-16">
+          <p className="text-4xl mb-4">🏅</p>
+          <p className="text-white font-medium mb-1">No personal records found nearby</p>
+          <p className="text-gray-400 text-sm mb-4">
+            Get out there and take some segments — your PRs will show up here once you've ridden them.
+          </p>
+          {onSwitchToKom && (
+            <button
+              onClick={onSwitchToKom}
+              className="text-sm text-strava hover:text-strava-light underline"
+            >
+              Switch to KOM Hunt mode
+            </button>
+          )}
+        </div>
+      )
+    }
     return (
       <div className="text-center py-16">
         <p className="text-4xl mb-4">🏳️</p>
@@ -117,8 +138,11 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1 flex items-center gap-2">
         {label} ({segments.length})
+        {loading && (
+          <span className="inline-block w-3 h-3 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
+        )}
       </p>
       {visible.map((s) => <SegmentCard key={s.id} segment={s} unit={unit} userLat={userLat} userLng={userLng} roadDistance={roadDistances[s.id]} onHover={onHoverSegment} />)}
       {hasMore && <div ref={sentinelRef} className="h-4" />}

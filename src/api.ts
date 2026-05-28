@@ -48,7 +48,6 @@ export async function fetchSegments(
   lat: number,
   lng: number,
   activityType: string,
-  targetType: string,
   radiusKm: number,
   sortBy: string,
 ): Promise<ScoredSegment[]> {
@@ -56,7 +55,6 @@ export async function fetchSegments(
     lat: String(lat),
     lng: String(lng),
     activityType,
-    targetType,
     radiusKm: String(radiusKm),
     sortBy,
   })

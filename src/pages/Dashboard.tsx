@@ -56,7 +56,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [settings, setSettings] = useState<Settings>(() => loadSettings(stravaStatus))
   const { coords, error: locError } = useLocation()
-  const { allSegments, loading, error, refresh, rateLimitedUntil } = useSegments(coords, settings.activityType, settings.targetType, settings.radiusKm, settings.sortBy)
+  const { allSegments, loading, error, refresh, rateLimitedUntil } = useSegments(coords, settings.activityType, settings.radiusKm, settings.sortBy)
   const listRef = useRef<HTMLDivElement>(null)
   const segMapRef = useRef<L.Map | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
@@ -113,12 +113,25 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     }
   }, [allSegments])
 
+  // Re-score segments client-side for personal_best mode — no API call needed
+  const scoredPool = useMemo(() => {
+    if (settings.targetType !== 'personal_best') return allSegments
+    return allSegments
+      .filter((s) => s.userPR != null)
+      .map((s) => ({
+        ...s,
+        score: (s.userPR! - 1 - (s.estimatedTime ?? s.userPR!)) / (s.userPR! - 1),
+        targetTime: s.userPR!,
+        targetLabel: 'Your Best',
+      }))
+  }, [allSegments, settings.targetType])
+
   const segmentCounts = useMemo(() => {
     if (!coords) return { hunt: 0, harvest: 0 }
     const distFromUser = (s: ScoredSegment) => s.startLatlng
       ? haversineKm(coords.lat, coords.lng, s.startLatlng[0], s.startLatlng[1])
       : haversineKm(coords.lat, coords.lng, s.midpointLat, s.midpointLng)
-    const base = allSegments.filter((s) => {
+    const base = scoredPool.filter((s) => {
       const distKm = s.distance / 1000
       return (
         distFromUser(s) <= settings.radiusKm &&
@@ -132,7 +145,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       hunt: base.filter((s) => s.score >= -0.35 && s.score <= 0.35).length,
       harvest: base.filter((s) => s.score > 0).length,
     }
-  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.minElevationChange, settings.maxElevationChange])
+  }, [scoredPool, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.minElevationChange, settings.maxElevationChange])
 
   // Filter cached segments by radius + distance + mode — no API call
   const segments = useMemo(() => {
@@ -141,7 +154,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       ? haversineKm(coords.lat, coords.lng, s.startLatlng[0], s.startLatlng[1])
       : haversineKm(coords.lat, coords.lng, s.midpointLat, s.midpointLng)
 
-    let filtered = allSegments.filter((s) => {
+    let filtered = scoredPool.filter((s) => {
       const distKm = s.distance / 1000
       return (
         distFromUser(s) <= settings.radiusKm &&
@@ -164,7 +177,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
       filtered.sort((a, b) => b.score - a.score)
     }
     return filtered
-  }, [allSegments, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.minElevationChange, settings.maxElevationChange, settings.mode, settings.sortBy])
+  }, [scoredPool, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.minElevationChange, settings.maxElevationChange, settings.mode, settings.sortBy])
 
   const displayError = locError ?? error
   const isMapMode = tab === 'evictions' && viewMode === 'map'
@@ -278,6 +291,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
               roadDistances={roadDistances}
               onHoverSegment={handleHoverSegment}
               rateLimitedUntil={rateLimitedUntil}
+              targetType={settings.targetType}
+              onSwitchToKom={() => setSettings((s) => ({ ...s, targetType: 'kom' }))}
             />
           </div>
         </div>

@@ -272,28 +272,26 @@ app.http('segments', {
             }
           }
 
-          // Live Strava fetch: needed when core or PR still missing after all cache layers
-          if (!coreData || prData === null) {
-            if (stravaDetailFetches >= MAX_DETAIL_FETCHES) {
-              if (!coreData) return null               // can't score without KOM time
-              prData = { prElapsedTime: null }         // cap reached — proceed with null PR, retry next request
-            } else {
-              stravaDetailFetches++
-              try {
-                const detail = await stravaGet(`/segments/${seg.id}`, accessToken)
-                detail.translatedName = await translateToEnglish(detail.name)
-                coreData = extractCoreFields(detail)
-                prData   = { prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null }
-                cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
-                cacheSet(prL1Key,   prData,   TTL_LEADERBOARD)
-                setSharedSegmentCache(seg.id, coreData)
-                setUserPRCache(seg.id, athleteId, prData)
-              } catch (fetchErr) {
-                cacheSet(failKey, true, 5 * 60)
-                context.warn(`Failed to score segment ${seg.id}:`, fetchErr.message)
-                return null
-              }
+          // Live Strava fetch: only needed when coreData is missing — PR is captured opportunistically
+          if (!coreData) {
+            if (stravaDetailFetches >= MAX_DETAIL_FETCHES) return null
+            stravaDetailFetches++
+            try {
+              const detail = await stravaGet(`/segments/${seg.id}`, accessToken)
+              detail.translatedName = await translateToEnglish(detail.name)
+              coreData = extractCoreFields(detail)
+              prData   = { prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null }
+              cacheSet(coreL1Key, coreData, TTL_LEADERBOARD)
+              cacheSet(prL1Key,   prData,   TTL_LEADERBOARD)
+              setSharedSegmentCache(seg.id, coreData)
+              setUserPRCache(seg.id, athleteId, prData)
+            } catch (fetchErr) {
+              cacheSet(failKey, true, 5 * 60)
+              context.warn(`Failed to score segment ${seg.id}:`, fetchErr.message)
+              return null
             }
+          } else if (prData === null) {
+            prData = { prElapsedTime: null }
           }
 
           const athletePR = prData.prElapsedTime
@@ -366,6 +364,30 @@ app.http('segments', {
       })
 
     const results = scored.filter(Boolean).sort((a, b) => b.score - a.score)
+
+    // Fire-and-forget: warm coreData for segments that didn't get a slot this request
+    const uncached = allSegments.filter((s) => !cacheGet(`segCore:${s.id}`))
+    if (uncached.length > 0) {
+      ;(async () => {
+        for (const seg of uncached) {
+          if (cacheGet(`segCore:${seg.id}`)) continue
+          try {
+            const detail = await stravaGet(`/segments/${seg.id}`, accessToken)
+            detail.translatedName = await translateToEnglish(detail.name)
+            const core = extractCoreFields(detail)
+            const pr   = { prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null }
+            cacheSet(`segCore:${seg.id}`, core, TTL_LEADERBOARD)
+            cacheSet(`segPr:${seg.id}:${athleteId}`, pr, TTL_LEADERBOARD)
+            setSharedSegmentCache(seg.id, core)
+            setUserPRCache(seg.id, athleteId, pr)
+            await new Promise((r) => setTimeout(r, 600))
+          } catch {
+            break
+          }
+        }
+      })()
+    }
+
     return { jsonBody: results }
   },
 })

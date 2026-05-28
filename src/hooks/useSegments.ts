@@ -17,7 +17,7 @@ function useDebounce<T>(value: T, ms: number): T {
   return debounced
 }
 
-export function useSegments(coords: Coords | null, activityType: string, targetType: string, radiusKm: number, sortBy: string) {
+export function useSegments(coords: Coords | null, activityType: string, radiusKm: number, sortBy: string) {
   const [allSegments, setAllSegments] = useState<ScoredSegment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +33,7 @@ export function useSegments(coords: Coords | null, activityType: string, targetT
   const snappedLat = coords ? snap(coords.lat) : null
   const snappedLng = coords ? snap(coords.lng) : null
   const fetchKey = snappedLat != null
-    ? `${snappedLat}:${snappedLng}:${activityType}:${targetType}:${debouncedRadiusKm}`
+    ? `${snappedLat}:${snappedLng}:${activityType}:${debouncedRadiusKm}`
     : null
   const prevFetchKey = useRef<string | null>(null)
 
@@ -43,7 +43,7 @@ export function useSegments(coords: Coords | null, activityType: string, targetT
     setLoading(true)
     setError(null)
     try {
-      setAllSegments(await fetchSegments(c.lat, c.lng, activityType, targetType, debouncedRadiusKm, sortByRef.current))
+      setAllSegments(await fetchSegments(c.lat, c.lng, activityType, debouncedRadiusKm, sortByRef.current))
       setRateLimitedUntil(null)
     } catch (e) {
       if (e instanceof RateLimitError) {
@@ -53,7 +53,7 @@ export function useSegments(coords: Coords | null, activityType: string, targetT
     } finally {
       setLoading(false)
     }
-  }, [activityType, targetType, debouncedRadiusKm])
+  }, [activityType, debouncedRadiusKm])
 
   // Auto-retry when the rate limit window expires
   useEffect(() => {
