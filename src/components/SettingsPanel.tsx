@@ -84,24 +84,45 @@ export default function SettingsPanel({ settings, onChange, segmentDistanceRange
           </div>
         </div>
 
-        <div>
-          <p className="text-sm font-semibold text-white mb-3">Beat Target</p>
-          <div className="space-y-2">
-            {(['kom', 'personal_best'] as const).map((value) => (
-              <label key={value} className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="targetType"
-                  value={value}
-                  checked={settings.targetType === value}
-                  onChange={() => onChange({ ...settings, targetType: value })}
-                  className="accent-strava"
-                />
-                <span className="text-sm text-gray-300">
-                  {value === 'kom' ? 'Course Record' : 'Personal Best'}
-                </span>
-              </label>
-            ))}
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <p className="text-sm font-semibold text-white mb-3">Beat Target</p>
+            <div className="space-y-2">
+              {(['kom', 'personal_best'] as const).map((value) => (
+                <label key={value} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="targetType"
+                    value={value}
+                    checked={settings.targetType === value}
+                    onChange={() => onChange({ ...settings, targetType: value })}
+                    className="accent-strava"
+                  />
+                  <span className="text-sm text-gray-300">
+                    {value === 'kom' ? 'Course Record' : 'Personal Best'}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-white mb-3">Units</p>
+            <div className="space-y-2">
+              {([{ value: 'km', label: 'Kilometres' }, { value: 'mile', label: 'Miles' }] as const).map(({ value, label }) => (
+                <label key={value} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="unit"
+                    value={value}
+                    checked={settings.unit === value}
+                    onChange={() => onChange({ ...settings, unit: value })}
+                    className="accent-strava"
+                  />
+                  <span className="text-sm text-gray-300">{label}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 
