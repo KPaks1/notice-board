@@ -82,6 +82,10 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   }, [])
 
   useEffect(() => {
+    listRef.current?.scrollTo({ top: 0 })
+  }, [settings.sortBy, settings.mode])
+
+  useEffect(() => {
     if (!coords || allSegments.length === 0) return
     setRoadDistances({})
     const controller = new AbortController()
@@ -249,16 +253,12 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
         {/* List panel */}
         <div className={[
-          tab === 'board' && viewMode === 'list' ? 'flex-1 flex flex-col' : 'hidden',
+          tab === 'board' && viewMode === 'list' ? 'flex-1 flex flex-col relative' : 'hidden',
           tab === 'board'
             ? 'md:flex md:flex-col md:relative md:flex-none md:w-96 md:shrink-0 md:border-r md:border-gray-800'
             : 'md:hidden',
         ].join(' ')}>
-          <div
-            ref={listRef}
-            className="flex-1 overflow-y-auto no-scrollbar"
-          >
-          <div className="px-4 pb-28 md:px-4 md:pb-4 md:pt-4">
+          <div className="px-4 pt-4 md:pt-4 shrink-0">
             <div className="flex gap-1 mb-2">
               {(['hunt', 'harvest'] as const).map((m) => (
                 <button
@@ -289,6 +289,12 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                 </button>
               ))}
             </div>
+          </div>
+          <div
+            ref={listRef}
+            className="flex-1 overflow-y-auto no-scrollbar"
+          >
+          <div className="px-4 pb-28 md:pb-4">
             <EvictionsList
               segments={segments}
               loading={loading || (!coords && !locError)}
@@ -306,6 +312,15 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
             />
           </div>
           </div>
+
+          {/* Mobile back-to-top — floats above the segment list, anchored to list column */}
+          <button
+            onClick={() => listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            className={`md:hidden absolute bottom-20 right-4 z-[1004] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            aria-label="Back to top"
+          >
+            <ArrowUp size={18} />
+          </button>
 
           {/* Desktop back-to-top — anchored to list column */}
           <button
@@ -397,15 +412,6 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           </div>
         </div>
       </main>
-
-      {/* Mobile back-to-top */}
-      <button
-        onClick={() => listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-        className={`md:hidden fixed bottom-20 right-4 z-[1004] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        aria-label="Back to top"
-      >
-        <ArrowUp size={18} />
-      </button>
 
       {/* Desktop profile slide-out panel */}
       {profileOpen && (
