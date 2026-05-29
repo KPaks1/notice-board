@@ -103,7 +103,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   }, [settings])
 
   const handleSegmentSelect = useCallback((segment: ScoredSegment) => {
-    setSelectedSegment(segment)
+    setSelectedSegment((prev) => prev?.id === segment.id ? null : segment)
   }, [])
 
   const segmentDistanceRange = useMemo(() => {

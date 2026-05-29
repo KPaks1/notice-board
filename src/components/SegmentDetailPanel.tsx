@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, Crosshair, ExternalLink, LocateFixed, Minus, Navigation, Plus, X } from 'lucide-react'
+import { ChevronLeft, Crosshair, ExternalLink, Minus, Navigation, Plus, X } from 'lucide-react'
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
@@ -21,10 +21,10 @@ function MapController({ onReady }: { onReady: (map: L.Map) => void }) {
 
 function Badge({ score }: { score: number }) {
   if (score > 0)
-    return <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-500/20 text-green-400">BEATABLE</span>
+    return <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-green-500/20 text-green-400">BEATABLE</span>
   if (score > -0.05)
-    return <span className="text-xs font-semibold px-2 py-1 rounded-full bg-amber-500/20 text-amber-400">CLOSE</span>
-  return <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-700 text-gray-400">TOUGH</span>
+    return <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-400">CLOSE</span>
+  return <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-gray-700 text-gray-400">TOUGH</span>
 }
 
 function StatBox({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
@@ -180,8 +180,7 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
             </MapContainer>
 
             {/* Map controls — vertical on mobile, horizontal row on desktop */}
-            <div className="absolute top-4 right-4 md:top-auto md:bottom-3 md:right-3 z-[1002] flex flex-col md:flex-row md:items-center gap-1 md:gap-1.5">
-              <span className="hidden md:inline-flex"><Badge score={segment.score} /></span>
+            <div className="absolute bottom-3 right-4 md:right-3 z-[1002] flex flex-col gap-1">
               <MapButton
                 onClick={() => mapRef.current?.fitBounds(mapBounds, { padding: [20, 20] })}
                 className="p-2 rounded-lg bg-gray-900/90 text-white hover:bg-gray-800 transition-colors shadow"
@@ -189,15 +188,6 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
               >
                 <Crosshair size={16} />
               </MapButton>
-              {userLat != null && userLng != null && (
-                <MapButton
-                  onClick={() => mapRef.current?.setView([userLat, userLng], 15)}
-                  className="p-2 rounded-lg bg-gray-900/90 text-blue-400 hover:bg-gray-800 transition-colors shadow"
-                  aria-label="Recentre on my location"
-                >
-                  <LocateFixed size={16} />
-                </MapButton>
-              )}
               <MapButton
                 onClick={() => mapRef.current?.zoomIn()}
                 className="p-2 rounded-lg bg-gray-900/90 text-gray-300 hover:bg-gray-800 transition-colors shadow"
@@ -241,7 +231,7 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
         {onClose && (
           <button
             onClick={onClose}
-            className="hidden md:flex absolute top-3 right-3 z-[1002] items-center justify-center p-1.5 rounded-lg bg-gray-900/90 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
+            className="hidden md:flex absolute top-3 right-3 z-[1002] items-center justify-center p-2 rounded-lg bg-gray-900/90 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors shadow"
             aria-label="Close"
           >
             <X size={16} />
@@ -254,7 +244,7 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
 
         {/* Mobile drag handle */}
         <div className="md:hidden flex justify-center pt-3 pb-1">
-          <div className="w-8 h-1 bg-gray-700 rounded-full" />
+          <div className="w-8 h-1 bg-gray-700 rounded-lg" />
         </div>
 
         <div className="px-5 pt-4 pb-8 md:pb-6 space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-6">
@@ -281,7 +271,7 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-gray-800 text-white text-sm font-semibold hover:bg-gray-700 transition-colors"
                 >
-                  Directions <Navigation size={15} />
+                  <span className="md:hidden lg:inline">Directions</span><Navigation size={15} />
                 </a>
               )}
               <a
@@ -290,7 +280,7 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-strava text-white text-sm font-semibold hover:bg-strava-dark transition-colors"
               >
-                View on Strava <ExternalLink size={15} />
+                <span className="md:hidden lg:inline">Strava</span><ExternalLink size={15} />
               </a>
             </div>
           </div>
@@ -298,10 +288,16 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
           {/* Right column (desktop) / below actions (mobile): elevation */}
           <div className="md:flex md:flex-col">
             {elevationLoading ? (
-              <div className="bg-gray-800/60 rounded-xl p-3 animate-pulse md:flex-1">
-                <div className="h-3 w-24 bg-gray-700 rounded mb-3" />
-                <div className="h-3 w-40 bg-gray-700 rounded mb-2" />
-                <div className="h-[88px] md:h-full bg-gray-700 rounded-lg" />
+              <div className="bg-gray-800/60 rounded-xl p-3 animate-pulse md:flex-1 md:flex md:flex-col overflow-hidden">
+                <div className="h-3 w-24 bg-gray-700 rounded mb-2 shrink-0" />
+                <div className="space-y-2 md:flex-1 md:flex md:flex-col md:min-h-0">
+                  <div className="flex gap-3 shrink-0">
+                    <div className="h-3 w-16 bg-gray-700 rounded" />
+                    <div className="h-3 w-16 bg-gray-700 rounded" />
+                    <div className="h-3 w-16 bg-gray-700 rounded" />
+                  </div>
+                  <div className="h-[88px] md:flex-1 md:min-h-[40px] bg-gray-700 rounded-lg" />
+                </div>
               </div>
             ) : elevation ? (
               <div className="bg-gray-800/60 rounded-xl p-3 md:flex-1 md:flex md:flex-col">
