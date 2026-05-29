@@ -33,7 +33,7 @@ app.http('athleteEffortsRefresh', {
     if (!tokenData) return { status: 403, jsonBody: { error: 'Strava not connected' } }
 
     try {
-      const result = await computeAndSaveBestEfforts(athleteId, tokenData.accessToken)
+      const result = await computeAndSaveBestEfforts(athleteId, tokenData.accessToken, { ignoreCache: true })
       return { jsonBody: { computed: true, ...result } }
     } catch (err) {
       if (err instanceof StravaError) {

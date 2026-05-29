@@ -13,13 +13,15 @@ const TARGETS = [
 // Rolling window distances pulled from activity streams.
 // searchM = actual metres searched; effortM = key in TARGETS (1 mile = 1609m actual).
 const ROLLING_TARGETS = [
-  { searchM: 100,  effortM: 100  },
-  { searchM: 400,  effortM: 400  },
-  { searchM: 1000, effortM: 1000 },
-  { searchM: 1609, effortM: 1600 },
+  { searchM: 100,   effortM: 100   },
+  { searchM: 400,   effortM: 400   },
+  { searchM: 1000,  effortM: 1000  },
+  { searchM: 1609,  effortM: 1600  },
+  { searchM: 5000,  effortM: 5000  },
+  { searchM: 10000, effortM: 10000 },
 ]
 const ROLLING_EFFORT_DISTS = new Set(ROLLING_TARGETS.map((t) => t.effortM))
-const STREAM_RUN_LIMIT = 50
+const STREAM_RUN_LIMIT = 100
 
 const RUN_TYPES = new Set(['Run', 'VirtualRun'])
 const RIDE_TYPES = new Set(['Ride', 'VirtualRide'])
@@ -86,10 +88,12 @@ async function fetchRollingBests(runs, accessToken, streamCache = {}) {
   await Promise.all(recent.map(async (activity) => {
     const id = String(activity.id)
 
-    if (updatedCache[id]) {
+    const cached = updatedCache[id]
+    const cacheComplete = cached && ROLLING_TARGETS.every(({ effortM }) => effortM in cached)
+    if (cacheComplete) {
       // Cache hit — contribute cached splits to bests without any API call
       for (const { effortM } of ROLLING_TARGETS) {
-        const t = updatedCache[id][effortM]
+        const t = cached[effortM]
         if (t != null && (bests[effortM] == null || t < bests[effortM])) {
           bests[effortM] = t
         }
@@ -216,15 +220,17 @@ export function estimateTimeForDistance(effortList, distanceM) {
   return Math.round(anchor.estimatedSecs * Math.pow(distanceM / anchor.distanceM, k))
 }
 
-export async function computeAndSaveBestEfforts(athleteId, accessToken) {
+export async function computeAndSaveBestEfforts(athleteId, accessToken, { ignoreCache = false } = {}) {
   const activities = await stravaGet('/athlete/activities?per_page=200', accessToken)
   const runs  = activities.filter((a) => RUN_TYPES.has(a.sport_type))
   const rides = activities.filter((a) => RIDE_TYPES.has(a.sport_type))
 
-  // Fetch rolling best splits for the 4 short distances from the 50 most recent runs.
+  // Fetch rolling best splits from the most recent runs' GPS streams.
   // Cached stream results (keyed by activity ID) avoid re-fetching immutable activity data.
+  // ignoreCache=true (manual refresh) forces all streams to be re-fetched.
   const token = await getToken(athleteId)
-  const { bests: rollingBests, updatedCache } = await fetchRollingBests(runs, accessToken, token?.streamCache ?? {})
+  const seedCache = ignoreCache ? {} : (token?.streamCache ?? {})
+  const { bests: rollingBests, updatedCache } = await fetchRollingBests(runs, accessToken, seedCache)
 
   const result = {
     run:  computeEfforts(runs,  rollingBests),
