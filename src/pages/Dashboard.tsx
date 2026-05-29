@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUp, List, LocateFixed, Map, Minus, Plus, RefreshCw, User, X } from 'lucide-react'
+import { ArrowUp, List, LocateFixed, Map, Minus, Plus, RefreshCw, Settings2, Target, User, X } from 'lucide-react'
 import L from 'leaflet'
 import { useLocation } from '../hooks/useLocation'
 import { useSegments } from '../hooks/useSegments'
@@ -436,11 +436,11 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         </div>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-900 border-t border-gray-800 z-[1001]">
-        <div className="flex">
-          <TabButton active={tab === 'board'} onClick={() => setTab('board')} icon="🎯" label="Board" />
-          <TabButton active={tab === 'settings'}  onClick={() => setTab('settings')}  icon="⚙️" label="Settings"  />
-          <TabButton active={tab === 'profile'}   onClick={() => setTab('profile')}   icon="👤" label="Profile"   />
+      <nav className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-950/90 backdrop-blur-xl border-t border-white/5 z-[1001]">
+        <div className="flex pb-safe">
+          <TabButton active={tab === 'board'} onClick={() => setTab('board')} icon={<Target size={20} />} label="Board" />
+          <TabButton active={tab === 'settings'} onClick={() => setTab('settings')} icon={<Settings2 size={20} />} label="Settings" />
+          <TabButton active={tab === 'profile'} onClick={() => setTab('profile')} icon={<User size={20} />} label="Profile" />
         </div>
       </nav>
     </div>
@@ -455,18 +455,17 @@ function TabButton({
 }: {
   active: boolean
   onClick: () => void
-  icon: string
+  icon: React.ReactNode
   label: string
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
-        active ? 'text-strava' : 'text-gray-500 hover:text-gray-300'
-      }`}
-    >
-      <span className="text-lg">{icon}</span>
-      {label}
+    <button onClick={onClick} className="flex-1 flex flex-col items-center py-2">
+      <span className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-2xl transition-colors ${
+        active ? 'bg-gray-800 text-white' : 'text-gray-500'
+      }`}>
+        {icon}
+        <span className="text-[10px] font-medium">{label}</span>
+      </span>
     </button>
   )
 }
