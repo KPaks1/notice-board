@@ -33,6 +33,8 @@ interface Props {
   userLng: number
   roadDistances: Record<number, number>
   onHoverSegment?: (id: number | null) => void
+  onSelect?: (segment: ScoredSegment) => void
+  selectedSegmentId?: number | null
   rateLimitedUntil?: number | null
   targetType?: string
   onSwitchToKom?: () => void
@@ -50,7 +52,7 @@ function useSecondsUntil(timestamp: number | null | undefined): number | null {
   return seconds
 }
 
-export default function EvictionsList({ segments, loading, error, onRefresh, mode, unit, userLat, userLng, roadDistances, onHoverSegment, rateLimitedUntil, targetType, onSwitchToKom }: Props) {
+export default function EvictionsList({ segments, loading, error, onRefresh, mode, unit, userLat, userLng, roadDistances, onHoverSegment, onSelect, selectedSegmentId, rateLimitedUntil, targetType, onSwitchToKom }: Props) {
   const secondsLeft = useSecondsUntil(rateLimitedUntil)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -144,7 +146,7 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
           <span className="inline-block w-3 h-3 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
         )}
       </p>
-      {visible.map((s) => <SegmentCard key={s.id} segment={s} unit={unit} userLat={userLat} userLng={userLng} roadDistance={roadDistances[s.id]} onHover={onHoverSegment} />)}
+      {visible.map((s) => <SegmentCard key={s.id} segment={s} unit={unit} userLat={userLat} userLng={userLng} roadDistance={roadDistances[s.id]} onHover={onHoverSegment} onSelect={onSelect} isSelected={selectedSegmentId === s.id} />)}
       {hasMore && <div ref={sentinelRef} className="h-4" />}
     </div>
   )

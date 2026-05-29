@@ -12,6 +12,7 @@ import { APP_NAME } from '../constants'
 import { haversineKm } from '../geo'
 import EvictionsList from '../components/EvictionsList'
 import { MapButton } from '../components/MapButton'
+import SegmentDetailPanel from '../components/SegmentDetailPanel'
 import SegmentsMap from '../components/SegmentsMap'
 import SettingsPanel from '../components/SettingsPanel'
 import MapFilterOverlay from '../components/MapFilterOverlay'
@@ -61,6 +62,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const segMapRef = useRef<L.Map | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [selectedSegment, setSelectedSegment] = useState<ScoredSegment | null>(null)
   const [roadDistances, setRoadDistances] = useState<Record<number, number>>({})
   const [hoveredSegmentId, setHoveredSegmentId] = useState<number | null>(null)
   const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -99,6 +101,10 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
   }, [settings])
+
+  const handleSegmentSelect = useCallback((segment: ScoredSegment) => {
+    setSelectedSegment(segment)
+  }, [])
 
   const segmentDistanceRange = useMemo(() => {
     if (allSegments.length === 0) return null
@@ -183,6 +189,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     }
     return filtered
   }, [scoredPool, coords, settings.radiusKm, settings.minSegmentKm, settings.maxSegmentKm, settings.minElevationChange, settings.maxElevationChange, settings.mode, settings.sortBy])
+
+  useEffect(() => { setSelectedSegment(null) }, [segments])
 
   const displayError = locError ?? error
   const isMapMode = tab === 'board' && viewMode === 'map'
@@ -306,6 +314,8 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
               userLng={coords?.lng ?? 0}
               roadDistances={roadDistances}
               onHoverSegment={handleHoverSegment}
+              onSelect={handleSegmentSelect}
+              selectedSegmentId={selectedSegment?.id}
               rateLimitedUntil={rateLimitedUntil}
               targetType={settings.targetType}
               onSwitchToKom={() => setSettings((s) => ({ ...s, targetType: 'kom' }))}
@@ -333,12 +343,20 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           </button>
         </div>
 
-        {/* Map panel */}
+        {/* Map / detail panel */}
         <div className={[
           tab === 'board' && viewMode === 'map' ? 'flex-1 overflow-hidden pb-14 relative' : 'hidden',
-          tab === 'board' ? 'md:flex md:flex-1 md:pb-0 md:relative' : 'md:hidden',
+          tab === 'board' ? 'md:flex md:flex-1 md:pb-0 md:relative md:overflow-hidden' : 'md:hidden',
         ].join(' ')}>
-          {coords ? (
+          {selectedSegment ? (
+            <SegmentDetailPanel
+              segment={selectedSegment}
+              unit={settings.unit}
+              userLat={coords?.lat ?? null}
+              userLng={coords?.lng ?? null}
+              onClose={() => setSelectedSegment(null)}
+            />
+          ) : coords ? (
             <>
               <SegmentsMap
                 segments={segments}
@@ -435,6 +453,19 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           <ProfilePage stravaStatus={stravaStatus} unit={settings.unit} />
         </div>
       </div>
+
+      {/* Mobile full-screen segment detail overlay */}
+      {selectedSegment && (
+        <div className="md:hidden fixed inset-0 z-[1010] bg-gray-950 flex flex-col max-w-lg mx-auto">
+          <SegmentDetailPanel
+            segment={selectedSegment}
+            unit={settings.unit}
+            userLat={coords?.lat ?? null}
+            userLng={coords?.lng ?? null}
+            onClose={() => setSelectedSegment(null)}
+          />
+        </div>
+      )}
 
       <nav className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-gray-950/90 backdrop-blur-xl border-t border-white/5 z-[1001]">
         <div className="flex pb-safe">

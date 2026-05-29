@@ -20,9 +20,11 @@ interface Props {
   userLng: number
   roadDistance?: number
   onHover?: (id: number | null) => void
+  onSelect?: (segment: ScoredSegment) => void
+  isSelected?: boolean
 }
 
-export default function SegmentCard({ segment, unit, userLat, userLng, roadDistance, onHover }: Props) {
+export default function SegmentCard({ segment, unit, userLat, userLng, roadDistance, onHover, onSelect, isSelected }: Props) {
   const needTime = Math.max(0, segment.targetTime - 1)
 
   const haversineM = segment.startLatlng
@@ -31,20 +33,17 @@ export default function SegmentCard({ segment, unit, userLat, userLng, roadDista
   const distanceM = roadDistance ?? haversineM
   const isByPlane = roadDistance == null && distanceM != null
 
-  return (
-    <Link
-      to={`/segment/${segment.id}`}
-      state={{ segment, unit, userLat, userLng }}
-      className="block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors"
-      onMouseEnter={() => onHover?.(segment.id)}
-      onMouseLeave={() => onHover?.(null)}
-    >
+  const borderClass = isSelected
+    ? 'border-strava'
+    : 'border-gray-800 hover:border-gray-700'
+
+  const content = (
+    <>
       {segment.polyline && (
         <div className="rounded-t-xl overflow-hidden">
           <SegmentMiniMap polyline={segment.polyline} />
         </div>
       )}
-
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex-1 min-w-0">
@@ -84,6 +83,34 @@ export default function SegmentCard({ segment, unit, userLat, userLng, roadDista
           </div>
         </div>
       </div>
+    </>
+  )
+
+  if (onSelect) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onSelect(segment)}
+        onKeyDown={(e) => e.key === 'Enter' && onSelect(segment)}
+        onMouseEnter={() => onHover?.(segment.id)}
+        onMouseLeave={() => onHover?.(null)}
+        className={`block bg-gray-900 border rounded-xl overflow-hidden cursor-pointer transition-colors ${borderClass}`}
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      to={`/segment/${segment.id}`}
+      state={{ segment, unit, userLat, userLng }}
+      className={`block bg-gray-900 border rounded-xl overflow-hidden transition-colors ${borderClass}`}
+      onMouseEnter={() => onHover?.(segment.id)}
+      onMouseLeave={() => onHover?.(null)}
+    >
+      {content}
     </Link>
   )
 }
