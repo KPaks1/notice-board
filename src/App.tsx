@@ -162,6 +162,7 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms-of-service" element={<TosPage />} />
           <Route path="/connect-strava" element={<ConnectStrava />} />
+          <Route path="/welcome" element={<WelcomePage onStart={() => {}} />} />
           <Route path="*" element={
             <StravaGuard>
               {(status) => (
