@@ -206,7 +206,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     })
 
   return (
-    <div className="h-screen bg-gray-950 flex flex-col max-w-lg mx-auto sm:rounded-2xl sm:overflow-hidden sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10 md:max-w-none md:rounded-none md:shadow-none md:ring-0">
+    <div className="h-screen overflow-hidden bg-gray-950 flex flex-col max-w-lg mx-auto sm:rounded-2xl sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10 md:max-w-none md:rounded-none md:shadow-none md:ring-0">
       <header className="relative flex items-center justify-between px-4 pt-6 pb-4 md:px-6 md:pt-4 md:pb-3 md:border-b md:border-gray-800 shrink-0">
         <div>
           <h1 className="text-xl font-black text-white tracking-tight uppercase -mb-1">{APP_NAME}</h1>
@@ -323,10 +323,10 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           </div>
           </div>
 
-          {/* Mobile back-to-top — floats above the segment list, anchored to list column */}
+          {/* Mobile back-to-top — fixed above the bottom nav bar */}
           <button
             onClick={() => listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-            className={`md:hidden absolute bottom-20 right-4 z-[1004] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            className={`md:hidden fixed bottom-20 right-4 z-[1004] p-2.5 rounded-full bg-gray-800 border border-gray-700 text-white shadow-lg transition-opacity duration-300 ${showScrollTop && !isMapMode ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             aria-label="Back to top"
           >
             <ArrowUp size={18} />
