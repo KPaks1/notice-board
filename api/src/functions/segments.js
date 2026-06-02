@@ -82,14 +82,19 @@ app.http('segments', {
     // Token validation and pool load are independent — run in parallel
     const poolL1Key = `pool:${athleteId}:${activityType}`
     const poolL1 = cacheGet(poolL1Key)
+    let tokenResult
     const [tokenData, poolDataRaw] = await Promise.all([
-      getValidToken(athleteId),
+      getValidToken(athleteId).then((t) => { tokenResult = 'ok'; return t }, (err) => { tokenResult = err; return null }),
       poolL1 ? Promise.resolve(poolL1) : getSegmentPool(athleteId, activityType).catch((err) => {
         context.warn('Could not load segment pool:', err.message)
         return { segments: [], updatedAt: 0, coveredTiles: [] }
       }),
     ])
 
+    if (tokenResult instanceof Error) {
+      context.error('Token lookup failed:', tokenResult.message)
+      return { status: 503, jsonBody: { error: 'Service temporarily unavailable. Please try again.' } }
+    }
     if (!tokenData) {
       return { status: 403, jsonBody: { error: 'Strava not connected' } }
     }
