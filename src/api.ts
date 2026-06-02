@@ -52,6 +52,7 @@ export async function fetchSegments(
   sortBy: string,
   onSegment: (segment: ScoredSegment) => void,
   signal?: AbortSignal,
+  cacheOnly?: boolean,
 ): Promise<void> {
   const params = new URLSearchParams({
     lat: String(lat),
@@ -60,6 +61,7 @@ export async function fetchSegments(
     radiusKm: String(radiusKm),
     sortBy,
   })
+  if (cacheOnly) params.set('cacheOnly', 'true')
   const res = await fetch(`/api/segments?${params}`, { headers: authHeaders(), signal })
   if (res.status === 429) throw new RateLimitError(parseRetryAfter(res))
   if (!res.ok) {

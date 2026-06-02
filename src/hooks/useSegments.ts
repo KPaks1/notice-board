@@ -44,31 +44,54 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
+    const signal = controller.signal
+
+    const onSegment = (segment: ScoredSegment) =>
+      setAllSegments((prev) => {
+        const idx = prev.findIndex((s) => s.id === segment.id)
+        if (idx >= 0) { const next = [...prev]; next[idx] = segment; return next }
+        return [...prev, segment]
+      })
+
+    // Phase A: cache-only — returns quickly, shows cached segments immediately
     setLoading(true)
     setError(null)
+    let cachedCount = 0
     try {
       await fetchSegments(
         c.lat, c.lng, activityType, debouncedRadiusKm, sortByRef.current,
-        (segment) => setAllSegments((prev) => {
-          const idx = prev.findIndex((s) => s.id === segment.id)
-          if (idx >= 0) {
-            const next = [...prev]
-            next[idx] = segment
-            return next
-          }
-          return [...prev, segment]
-        }),
-        controller.signal,
+        (seg) => { cachedCount++; onSegment(seg) },
+        signal,
+        true,
+      )
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return
+      // Phase A errors are non-fatal — Phase B may still succeed
+    } finally {
+      setLoading(false)
+    }
+
+    if (signal.aborted) return
+
+    // Phase B: full live fetch — augments Phase A results silently
+    try {
+      await fetchSegments(
+        c.lat, c.lng, activityType, debouncedRadiusKm, sortByRef.current,
+        onSegment,
+        signal,
       )
       setRateLimitedUntil(null)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
       if (e instanceof RateLimitError) {
         setRateLimitedUntil(Date.now() + e.retryAfter * 1000)
+        if (cachedCount === 0) setError(e.message)
+        return
       }
-      setError(e instanceof Error ? e.message : 'Something went wrong')
-    } finally {
-      setLoading(false)
+      if (cachedCount === 0) {
+        setError(e instanceof Error ? e.message : 'Something went wrong')
+      }
+      // cachedCount > 0: user already sees cached segments, suppress the error
     }
   }, [activityType, debouncedRadiusKm])
 

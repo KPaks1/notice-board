@@ -19,13 +19,6 @@ function MapController({ onReady }: { onReady: (map: L.Map) => void }) {
   return null
 }
 
-function Badge({ score }: { score: number }) {
-  if (score > 0)
-    return <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-green-500/20 text-green-400">BEATABLE</span>
-  if (score > -0.05)
-    return <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-amber-500/20 text-amber-400">CLOSE</span>
-  return <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-gray-700 text-gray-400">TOUGH</span>
-}
 
 function StatBox({ label, value, sub, highlight }: { label: string; value: string; sub?: string; highlight?: boolean }) {
   return (
@@ -223,7 +216,6 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
                 {segment.city && ` · ${segment.city}`}
               </p>
             </div>
-            <span className="md:hidden"><Badge score={segment.score} /></span>
           </div>
         </div>
 

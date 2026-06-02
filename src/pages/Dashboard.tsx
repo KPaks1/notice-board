@@ -4,7 +4,6 @@ import { ArrowUp, List, LocateFixed, Map, Minus, Plus, RefreshCw, Settings2, Tar
 import L from 'leaflet'
 import { useLocation } from '../hooks/useLocation'
 import { useSegments } from '../hooks/useSegments'
-import { formatRadius } from '../format'
 import type { Settings, ScoredSegment, SortBy, StravaStatus } from '../types'
 import { fetchRoadDistances } from '../osrm'
 
@@ -207,19 +206,14 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
 
   return (
     <div className="h-screen overflow-hidden bg-gray-950 flex flex-col max-w-lg mx-auto sm:rounded-2xl sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10 md:max-w-none md:rounded-none md:shadow-none md:ring-0">
-      <header className="relative flex items-center justify-between px-4 pt-6 pb-4 md:px-6 md:pt-4 md:pb-3 md:border-b md:border-gray-800 shrink-0">
+      <header className="relative flex items-center justify-between px-4 pt-6 pb-2 md:px-6 md:pt-4 md:pb-3 md:border-b md:border-gray-800 shrink-0">
         <div>
-          <h1 className="text-xl font-black text-white tracking-tight uppercase -mb-1">{APP_NAME}</h1>
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Beatable segments, near you.</span>
-          <div className="flex items-center gap-2 mt-0.5">
-            {coords && (
-              <p className="text-xs text-gray-500">
-                {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} · {formatRadius(settings.radiusKm, settings.unit)}
-              </p>
-            )}
-            {locError && <p className="text-xs text-red-400">{locError}</p>}
+          <h1 className="text-xl font-black text-white tracking-[0.1em] uppercase -mb-1">{APP_NAME}</h1>
+          <div className="flex items-end gap-2">
+            <span className="text-[10px] leading-none text-gray-500 uppercase tracking-wider">Beatable segments, near you.</span>
             <img src={poweredByStrava} alt="Powered by Strava" className="h-3 opacity-40" />
           </div>
+          {locError && <p className="text-xs text-red-400 mt-0.5">{locError}</p>}
         </div>
 
 
@@ -266,7 +260,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
             ? 'md:flex md:flex-col md:relative md:flex-none md:w-96 md:shrink-0 md:border-r md:border-gray-800'
             : 'md:hidden',
         ].join(' ')}>
-          <div className="px-4 pt-4 md:pt-4 shrink-0">
+          <div className="px-4 pt-2 md:pt-4 shrink-0">
             <div className="flex gap-1 mb-2">
               {(['hunt', 'harvest'] as const).map((m) => (
                 <button

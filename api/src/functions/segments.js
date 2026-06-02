@@ -74,6 +74,7 @@ app.http('segments', {
     const targetType = request.query.get('targetType') ?? 'kom'
     const sortBy = request.query.get('sortBy') ?? 'score'
     const radiusKm = Math.min(parseFloat(request.query.get('radiusKm') ?? '5'), 20)
+    const cacheOnly = request.query.get('cacheOnly') === 'true'
 
     if (isNaN(lat) || isNaN(lng)) {
       return { status: 400, jsonBody: { error: 'lat and lng are required' } }
@@ -340,7 +341,7 @@ app.http('segments', {
           }
         }))
 
-        if (needsFetch.length === 0) { controller.close(); return }
+        if (needsFetch.length === 0 || cacheOnly) { controller.close(); return }
 
         // Phase 2: Strava fetches for uncached segments, throttled, stop on rate limit
         let fetches = 0
