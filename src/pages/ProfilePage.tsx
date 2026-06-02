@@ -59,22 +59,17 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
     window.location.replace('/')
   }
 
-  const sexLabel =
-    stravaStatus.athleteSex === 'M' ? 'Male' :
-    stravaStatus.athleteSex === 'F' ? 'Female' :
-    'Unknown'
-
   return (
-    <div className="py-6 space-y-6">
-      <div className="flex flex-col items-center gap-3">
+    <div className="py-4 space-y-4">
+      <div className="flex items-center gap-4">
         {stravaStatus.athletePhoto ? (
           <img
             src={stravaStatus.athletePhoto}
             alt={stravaStatus.athleteName ?? 'Athlete'}
-            className="w-16 h-16 rounded-full object-cover"
+            className="w-14 h-14 rounded-full object-cover shrink-0"
           />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center text-2xl font-bold text-white">
+          <div className="w-14 h-14 rounded-full bg-gray-800 flex items-center justify-center text-xl font-bold text-white shrink-0">
             {initials(stravaStatus.athleteName)}
           </div>
         )}
@@ -83,11 +78,7 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
         </h2>
       </div>
 
-      <div className="flex gap-2 justify-center">
-        <span className="px-3 py-1 rounded-full bg-gray-800 text-sm text-gray-300">{sexLabel}</span>
-      </div>
-
-      <div className="space-y-4 pt-4 border-t border-gray-800">
+      <div className="space-y-4 pt-3 border-t border-gray-800">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-300">Estimated Times</h3>
           {!stravaStatus.isPublic && (
@@ -140,11 +131,11 @@ export default function ProfilePage({ stravaStatus, unit }: Props) {
       </div>
 
       {stravaStatus.isPublic ? (
-        <div className="pt-4 border-t border-gray-800">
+        <div className="pt-3 border-t border-gray-800">
           <p className="text-xs text-center text-gray-500">You're viewing a public profile.</p>
         </div>
       ) : (
-        <div className="pt-4 border-t border-gray-800">
+        <div className="pt-3 border-t border-gray-800">
           <button
             onClick={disconnect}
             className="w-full py-3 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors"
