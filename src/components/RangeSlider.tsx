@@ -52,16 +52,18 @@ export function SingleSlider({ min, max, step, value, onChange }: SingleSliderPr
   }
 
   return (
-    <div ref={trackRef} className="relative h-5 mx-2 cursor-pointer select-none" onClick={handleTrackClick}>
+    <div ref={trackRef} className="relative h-11 mx-2 cursor-pointer select-none" onClick={handleTrackClick}>
       <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1.5 rounded-full bg-gray-700 pointer-events-none" />
       <div className="absolute top-1/2 -translate-y-1/2 left-0 h-1.5 rounded-full bg-strava pointer-events-none" style={{ right: `${100 - pct}%` }} />
       <div
-        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-strava shadow-md cursor-grab active:cursor-grabbing hover:scale-110 transition-transform z-10"
+        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-11 h-11 flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
         style={{ left: `${pct}%` }}
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); dragging.current = true }}
         onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); dragging.current = true }}
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <div className="w-4 h-4 rounded-full bg-white border-2 border-strava shadow-md hover:scale-110 transition-transform pointer-events-none" />
+      </div>
     </div>
   )
 }
@@ -143,7 +145,7 @@ export default function RangeSlider({ min, max, step, valueMin, valueMax, onChan
   return (
     <div
       ref={trackRef}
-      className="relative h-5 mx-2 cursor-pointer select-none"
+      className="relative h-11 mx-2 cursor-pointer select-none"
       onClick={handleTrackClick}
     >
       {/* Base track */}
@@ -155,20 +157,24 @@ export default function RangeSlider({ min, max, step, valueMin, valueMax, onChan
       />
       {/* Min handle */}
       <div
-        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-strava shadow-md cursor-grab active:cursor-grabbing hover:scale-110 transition-transform z-10"
+        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-11 h-11 flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
         style={{ left: `${minPct}%` }}
         onMouseDown={startDrag('min')}
         onTouchStart={startDrag('min')}
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <div className="w-4 h-4 rounded-full bg-white border-2 border-strava shadow-md hover:scale-110 transition-transform pointer-events-none" />
+      </div>
       {/* Max handle */}
       <div
-        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 border-strava shadow-md cursor-grab active:cursor-grabbing hover:scale-110 transition-transform z-10"
+        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-11 h-11 flex items-center justify-center cursor-grab active:cursor-grabbing z-10"
         style={{ left: `${maxPct}%` }}
         onMouseDown={startDrag('max')}
         onTouchStart={startDrag('max')}
         onClick={(e) => e.stopPropagation()}
-      />
+      >
+        <div className="w-4 h-4 rounded-full bg-white border-2 border-strava shadow-md hover:scale-110 transition-transform pointer-events-none" />
+      </div>
     </div>
   )
 }
