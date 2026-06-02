@@ -8,14 +8,6 @@ interface Coords { lat: number; lng: number }
 const SNAP = 0.01
 const snap = (v: number) => Math.round(v / SNAP) * SNAP
 
-function useDebounce<T>(value: T, ms: number): T {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms)
-    return () => clearTimeout(t)
-  }, [value, ms])
-  return debounced
-}
 
 export function useSegments(coords: Coords | null, activityType: string, radiusKm: number, sortBy: string) {
   const [allSegments, setAllSegments] = useState<ScoredSegment[]>([])
@@ -24,17 +16,18 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
   const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
   const coordsRef = useRef(coords)
   coordsRef.current = coords
-  // Read sortBy at call time so changing sort re-orders client-side without triggering a refetch
   const sortByRef = useRef(sortBy)
   sortByRef.current = sortBy
+  // Read radiusKm at call time — radius changes are display-only and must not trigger a refetch
+  const radiusKmRef = useRef(radiusKm)
+  radiusKmRef.current = radiusKm
   const abortRef = useRef<AbortController | null>(null)
-
-  const debouncedRadiusKm = useDebounce(radiusKm, 800)
 
   const snappedLat = coords ? snap(coords.lat) : null
   const snappedLng = coords ? snap(coords.lng) : null
+  // Radius excluded from fetchKey — it controls tile coverage at fetch time via ref, not re-fetch triggers
   const fetchKey = snappedLat != null
-    ? `${snappedLat}:${snappedLng}:${activityType}:${debouncedRadiusKm}`
+    ? `${snappedLat}:${snappedLng}:${activityType}`
     : null
   const prevFetchKey = useRef<string | null>(null)
 
@@ -59,7 +52,7 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
     let cachedCount = 0
     try {
       await fetchSegments(
-        c.lat, c.lng, activityType, debouncedRadiusKm, sortByRef.current,
+        c.lat, c.lng, activityType, radiusKmRef.current, sortByRef.current,
         (seg) => { cachedCount++; onSegment(seg) },
         signal,
         true,
@@ -76,7 +69,7 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
     // Phase B: full live fetch — augments Phase A results silently
     try {
       await fetchSegments(
-        c.lat, c.lng, activityType, debouncedRadiusKm, sortByRef.current,
+        c.lat, c.lng, activityType, radiusKmRef.current, sortByRef.current,
         onSegment,
         signal,
       )
@@ -93,7 +86,7 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
       }
       // cachedCount > 0: user already sees cached segments, suppress the error
     }
-  }, [activityType, debouncedRadiusKm])
+  }, [activityType])
 
   // Auto-retry when the rate limit window expires
   useEffect(() => {
