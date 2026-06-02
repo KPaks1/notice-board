@@ -2,7 +2,7 @@ import { APP_NAME } from '../constants'
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950">
+    <div className="min-h-dvh flex items-center justify-center bg-gray-950">
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-10 w-full max-w-sm text-center shadow-xl">
         <div className="mb-6">
           <span className="text-5xl">🚴</span>

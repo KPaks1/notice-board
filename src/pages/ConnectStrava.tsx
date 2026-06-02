@@ -27,7 +27,7 @@ export default function ConnectStrava() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950">
+    <div className="min-h-dvh flex items-center justify-center bg-gray-950">
       {modal && <PolicyModal type={modal} onClose={() => setModal(null)} />}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-10 w-full max-w-sm text-center shadow-xl">
         <div className="mb-6">

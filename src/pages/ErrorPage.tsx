@@ -18,7 +18,7 @@ export default function ErrorPage() {
   }, [countdown])
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
+    <div className="min-h-dvh bg-gray-950 flex flex-col items-center justify-center gap-4 px-6 text-center">
       <h1 className="text-xl font-bold text-white tracking-tight">{APP_NAME}</h1>
       <p className="text-white font-medium text-sm">Oops, something went wrong</p>
       <p className="text-gray-500 text-xs">Heading back home in {countdown}…</p>
