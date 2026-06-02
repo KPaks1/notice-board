@@ -52,7 +52,7 @@ export function SingleSlider({ min, max, step, value, onChange }: SingleSliderPr
   }
 
   return (
-    <div ref={trackRef} className="relative h-8 mx-2 cursor-pointer select-none" onClick={handleTrackClick}>
+    <div ref={trackRef} className="relative h-5 mx-2 cursor-pointer select-none" onClick={handleTrackClick}>
       <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1.5 rounded-full bg-gray-700 pointer-events-none" />
       <div className="absolute top-1/2 -translate-y-1/2 left-0 h-1.5 rounded-full bg-strava pointer-events-none" style={{ right: `${100 - pct}%` }} />
       <div
@@ -145,7 +145,7 @@ export default function RangeSlider({ min, max, step, valueMin, valueMax, onChan
   return (
     <div
       ref={trackRef}
-      className="relative h-8 mx-2 cursor-pointer select-none"
+      className="relative h-5 mx-2 cursor-pointer select-none"
       onClick={handleTrackClick}
     >
       {/* Base track */}
