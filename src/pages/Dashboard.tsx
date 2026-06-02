@@ -208,9 +208,9 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
     <div className="h-screen overflow-hidden bg-gray-950 flex flex-col max-w-lg mx-auto sm:rounded-2xl sm:shadow-2xl sm:shadow-black/60 sm:ring-1 sm:ring-white/10 md:max-w-none md:rounded-none md:shadow-none md:ring-0">
       <header className="relative flex items-center justify-between px-4 pt-6 pb-2 md:px-6 md:pt-4 md:pb-3 md:border-b md:border-gray-800 shrink-0">
         <div>
-          <h1 className="text-xl font-black text-white tracking-[0.1em] uppercase -mb-1">{APP_NAME}</h1>
+          <h1 className="text-xl font-black text-white tracking-[0.05em] uppercase -mb-1">{APP_NAME}</h1>
           <div className="flex items-end gap-2">
-            <span className="text-[10px] leading-none text-gray-500 uppercase tracking-wider">Beatable segments, near you.</span>
+            <span className="text-[8px] leading-none text-gray-500 uppercase tracking-wider md:text-[10px]">Beatable segments, near you.</span>
             <img src={poweredByStrava} alt="Powered by Strava" className="h-3 opacity-40" />
           </div>
           {locError && <p className="text-xs text-red-400 mt-0.5">{locError}</p>}
