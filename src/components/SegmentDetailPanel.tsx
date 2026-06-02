@@ -243,11 +243,9 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
 
           {/* Left column: stats + gauge + actions */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} sub={formatPace(segment.targetTime, segment.distance, unit)} />
-                <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} sub={segment.userPR ? formatPace(segment.userPR, segment.distance, unit) : undefined} />
-              </div>
+            <div className={`grid gap-2 ${segment.estimatedTime != null ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <StatBox label={segment.targetLabel} value={formatTime(segment.targetTime)} sub={formatPace(segment.targetTime, segment.distance, unit)} />
+              <StatBox label="Your PR" value={segment.userPR ? formatTime(segment.userPR) : '—'} sub={segment.userPR ? formatPace(segment.userPR, segment.distance, unit) : undefined} />
               {segment.estimatedTime != null && (
                 <StatBox label="Est. best" value={formatTime(segment.estimatedTime)} sub={formatPace(segment.estimatedTime, segment.distance, unit)} />
               )}
@@ -255,7 +253,8 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
 
             <ScoreGauge score={segment.score} />
 
-            <div className="flex gap-2">
+            {/* Desktop-only buttons */}
+            <div className="hidden md:flex gap-2">
               {mapsUrl && (
                 <a
                   href={mapsUrl}
@@ -263,7 +262,7 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-gray-800 text-white text-sm font-semibold hover:bg-gray-700 transition-colors"
                 >
-                  <span className="md:hidden lg:inline">Directions</span><Navigation size={15} />
+                  Directions<Navigation size={15} />
                 </a>
               )}
               <a
@@ -272,13 +271,13 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-strava text-white text-sm font-semibold hover:bg-strava-dark transition-colors"
               >
-                <span className="md:hidden lg:inline">Strava</span><ExternalLink size={15} />
+                Strava<ExternalLink size={15} />
               </a>
             </div>
           </div>
 
-          {/* Right column (desktop) / below actions (mobile): elevation */}
-          <div className="md:flex md:flex-col">
+          {/* Right column (desktop) / below gauge (mobile): elevation + mobile buttons */}
+          <div className="md:flex md:flex-col space-y-4 md:space-y-0">
             {elevationLoading ? (
               <div className="bg-gray-800/60 rounded-xl p-3 animate-pulse md:flex-1 md:flex md:flex-col overflow-hidden">
                 <div className="h-3 w-24 bg-gray-700 rounded mb-2 shrink-0" />
@@ -305,6 +304,28 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
                 />
               </div>
             ) : null}
+
+            {/* Mobile-only buttons */}
+            <div className="md:hidden flex gap-2">
+              {mapsUrl && (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-gray-800 text-white text-sm font-semibold hover:bg-gray-700 transition-colors"
+                >
+                  Directions<Navigation size={15} />
+                </a>
+              )}
+              <a
+                href={`https://www.strava.com/segments/${segment.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 flex-1 py-3 rounded-xl bg-strava text-white text-sm font-semibold hover:bg-strava-dark transition-colors"
+              >
+                Strava<ExternalLink size={15} />
+              </a>
+            </div>
           </div>
         </div>
       </div>
