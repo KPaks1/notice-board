@@ -15,7 +15,7 @@ function alignedWindowResetMs() {
 function getState(accessToken) {
   let s = tokenRateLimits.get(accessToken)
   if (!s) {
-    s = { limit15: 100, used15: 0, windowResetMs: alignedWindowResetMs() }
+    s = { limit15: 200, used15: 0, windowResetMs: alignedWindowResetMs() }
     tokenRateLimits.set(accessToken, s)
   }
   if (Date.now() >= s.windowResetMs) {

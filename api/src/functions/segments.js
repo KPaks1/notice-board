@@ -217,7 +217,7 @@ app.http('segments', {
       }
     }
 
-    const MAX_DETAIL_FETCHES = 10
+    const MAX_DETAIL_FETCHES = 50
     const encoder = new TextEncoder()
 
     const buildResult = (seg, coreData, prData) => {
@@ -354,7 +354,7 @@ app.http('segments', {
             setUserPRCache(seg.id, athleteId, prData)
             const result = buildResult(seg, coreData, prData)
             if (result) enqueue(result)
-            await new Promise((r) => setTimeout(r, 600))
+            await new Promise((r) => setTimeout(r, 100))
           } catch (err) {
             if (err instanceof StravaError && err.status === 429) break
             cacheSet(`seg:${seg.id}:${athleteId}:fail`, true, 5 * 60)

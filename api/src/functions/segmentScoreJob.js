@@ -8,7 +8,7 @@ import { stravaGet } from '../stravaClient.js'
 import { translateToEnglish } from '../translator.js'
 import { extractCoreFields } from '../segmentHelpers.js'
 
-const DELAY_BETWEEN_FETCHES_MS = 600  // ~100 req/min, well under Strava's 100/15min limit
+const DELAY_BETWEEN_FETCHES_MS = 300  // ~200 req/min burst pace, within Strava's 200/15min limit
 
 app.timer('segmentScoreJob', {
   schedule: '0 0 */3 * * *',  // every 3 hours
