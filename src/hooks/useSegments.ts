@@ -9,7 +9,9 @@ const SNAP = 0.01
 const snap = (v: number) => Math.round(v / SNAP) * SNAP
 
 
-export function useSegments(coords: Coords | null, activityType: string, radiusKm: number, sortBy: string) {
+const FETCH_RADIUS_KM = 20
+
+export function useSegments(coords: Coords | null, activityType: string, sortBy: string) {
   const [allSegments, setAllSegments] = useState<ScoredSegment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,14 +20,10 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
   coordsRef.current = coords
   const sortByRef = useRef(sortBy)
   sortByRef.current = sortBy
-  // Read radiusKm at call time — radius changes are display-only and must not trigger a refetch
-  const radiusKmRef = useRef(radiusKm)
-  radiusKmRef.current = radiusKm
   const abortRef = useRef<AbortController | null>(null)
 
   const snappedLat = coords ? snap(coords.lat) : null
   const snappedLng = coords ? snap(coords.lng) : null
-  // Radius excluded from fetchKey — it controls tile coverage at fetch time via ref, not re-fetch triggers
   const fetchKey = snappedLat != null
     ? `${snappedLat}:${snappedLng}:${activityType}`
     : null
@@ -52,7 +50,7 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
     let cachedCount = 0
     try {
       await fetchSegments(
-        c.lat, c.lng, activityType, radiusKmRef.current, sortByRef.current,
+        c.lat, c.lng, activityType, FETCH_RADIUS_KM, sortByRef.current,
         (seg) => { cachedCount++; onSegment(seg) },
         signal,
         true,
@@ -69,7 +67,7 @@ export function useSegments(coords: Coords | null, activityType: string, radiusK
     // Phase B: full live fetch — augments Phase A results silently
     try {
       await fetchSegments(
-        c.lat, c.lng, activityType, radiusKmRef.current, sortByRef.current,
+        c.lat, c.lng, activityType, FETCH_RADIUS_KM, sortByRef.current,
         onSegment,
         signal,
       )
