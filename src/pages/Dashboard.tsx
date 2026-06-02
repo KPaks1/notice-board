@@ -4,6 +4,7 @@ import { ArrowUp, List, LocateFixed, Map, Minus, Plus, RefreshCw, Settings2, Tar
 import L from 'leaflet'
 import { useLocation } from '../hooks/useLocation'
 import { useSegments } from '../hooks/useSegments'
+import { usePullToRefresh, PULL_THRESHOLD } from '../hooks/usePullToRefresh'
 import type { Settings, ScoredSegment, SortBy, StravaStatus } from '../types'
 import { fetchRoadDistances } from '../osrm'
 
@@ -58,6 +59,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const { coords, error: locError } = useLocation()
   const { allSegments, loading, error, refresh, rateLimitedUntil } = useSegments(coords, settings.activityType, settings.sortBy)
   const listRef = useRef<HTMLDivElement>(null)
+  const { pullDistance } = usePullToRefresh(listRef, refresh, loading || !coords)
   const segMapRef = useRef<L.Map | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -221,19 +223,19 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
           {tab === 'board' && (
             <>
               <button
+                onClick={refresh}
+                disabled={loading || !coords}
+                className="hidden md:block p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition-colors"
+                aria-label="Refresh"
+              >
+                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              </button>
+              <button
                 onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
                 className="md:hidden p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
                 aria-label={viewMode === 'list' ? 'Switch to map' : 'Switch to list'}
               >
                 {viewMode === 'list' ? <Map size={18} /> : <List size={18} />}
-              </button>
-              <button
-                onClick={refresh}
-                disabled={loading || !coords}
-                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition-colors"
-                aria-label="Refresh"
-              >
-                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
               </button>
             </>
           )}
@@ -292,6 +294,18 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
               ))}
             </div>
           </div>
+          {/* Pull-to-refresh indicator */}
+          <div
+            className="md:hidden shrink-0 flex items-center justify-center overflow-hidden"
+            style={{ height: pullDistance }}
+          >
+            <RefreshCw
+              size={16}
+              className={pullDistance >= PULL_THRESHOLD ? 'text-strava' : 'text-gray-600'}
+              style={{ transform: `rotate(${Math.min(pullDistance / PULL_THRESHOLD, 1) * 360}deg)` }}
+            />
+          </div>
+
           <div
             ref={listRef}
             className="flex-1 overflow-y-auto no-scrollbar"
