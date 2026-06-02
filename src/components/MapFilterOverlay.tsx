@@ -11,12 +11,15 @@ interface Props {
   segmentDistanceRange: { min: number; max: number } | null
   segmentElevationRange: { min: number; max: number } | null
   segmentCount: number
+  disabled?: boolean
 }
 
-export default function MapFilterOverlay({ settings, onChange, segmentDistanceRange, segmentElevationRange, segmentCount }: Props) {
+export default function MapFilterOverlay({ settings, onChange, segmentDistanceRange, segmentElevationRange, segmentCount, disabled }: Props) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const u = settings.unit
+
+  useEffect(() => { if (disabled) setOpen(false) }, [disabled])
 
   useEffect(() => {
     if (!open) return
@@ -38,7 +41,8 @@ export default function MapFilterOverlay({ settings, onChange, segmentDistanceRa
       <div ref={containerRef} className="relative">
         <MapButton
           onClick={() => setOpen(!open)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-lg transition-colors ${
+          disabled={disabled}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-lg transition-colors disabled:opacity-40 disabled:pointer-events-none ${
             open
               ? 'bg-strava text-white'
               : 'bg-gray-900/90 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800'

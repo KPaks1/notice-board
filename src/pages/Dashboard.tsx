@@ -391,6 +391,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
                   segmentDistanceRange={segmentDistanceRange}
                   segmentElevationRange={segmentElevationRange}
                   segmentCount={settings.mode === 'hunt' ? segmentCounts.hunt : segmentCounts.harvest}
+                  disabled={loading}
                 />
               </div>
             </>
