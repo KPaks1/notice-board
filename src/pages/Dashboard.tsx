@@ -408,24 +408,21 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         </div>
 
         {/* Settings / Profile panel */}
-        <div className={
-          tab === 'board'
-            ? 'hidden'
-            : 'flex-1 overflow-y-auto no-scrollbar px-4 pb-28 md:pb-8 md:flex md:justify-center'
-        }>
-          <div className="md:max-w-2xl md:w-full">
-            <div className={tab !== 'settings' ? 'hidden' : ''}>
-              <SettingsPanel
-                settings={settings}
-                onChange={setSettings}
-
-                segmentDistanceRange={segmentDistanceRange}
-                segmentElevationRange={segmentElevationRange}
-                segmentCounts={segmentCounts}
-              />
-            </div>
-            <div className={tab !== 'profile' ? 'hidden' : ''}>
-              <ProfilePage stravaStatus={stravaStatus} unit={settings.unit} />
+        <div className={tab === 'board' ? 'hidden' : 'flex-1 min-h-0 flex flex-col'}>
+          <div className="flex-1 overflow-y-auto no-scrollbar md:flex md:justify-center">
+            <div className="px-4 pb-28 md:pb-8 md:max-w-2xl md:w-full">
+              <div className={tab !== 'settings' ? 'hidden' : ''}>
+                <SettingsPanel
+                  settings={settings}
+                  onChange={setSettings}
+                  segmentDistanceRange={segmentDistanceRange}
+                  segmentElevationRange={segmentElevationRange}
+                  segmentCounts={segmentCounts}
+                />
+              </div>
+              <div className={tab !== 'profile' ? 'hidden' : ''}>
+                <ProfilePage stravaStatus={stravaStatus} unit={settings.unit} />
+              </div>
             </div>
           </div>
         </div>
