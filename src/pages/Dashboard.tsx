@@ -26,7 +26,7 @@ function getDefaultSettings(status: StravaStatus): Settings {
     activityType: status.primaryActivity ?? 'running',
     targetType: 'kom',
     minSegmentKm: 0,
-    maxSegmentKm: 10,
+    maxSegmentKm: 9999,
     minElevationChange: 0,
     maxElevationChange: 9999,
     mode: 'hunt',

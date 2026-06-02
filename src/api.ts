@@ -53,6 +53,7 @@ export async function fetchSegments(
   onSegment: (segment: ScoredSegment) => void,
   signal?: AbortSignal,
   cacheOnly?: boolean,
+  maxRetries = 5,
 ): Promise<void> {
   const params = new URLSearchParams({
     lat: String(lat),
@@ -62,27 +63,42 @@ export async function fetchSegments(
     sortBy,
   })
   if (cacheOnly) params.set('cacheOnly', 'true')
-  const res = await fetch(`/api/segments?${params}`, { headers: authHeaders(), signal })
-  if (res.status === 429) throw new RateLimitError(parseRetryAfter(res))
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? 'Failed to fetch segments')
-  }
-  const reader = res.body!.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() ?? ''
-    for (const line of lines) {
-      if (line.trim()) {
-        try { onSegment(JSON.parse(line)) } catch {}
+
+  let lastError: Error | undefined
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+    const res = await fetch(`/api/segments?${params}`, { headers: authHeaders(), signal })
+    if (res.status === 429) throw new RateLimitError(parseRetryAfter(res))
+    if (res.status >= 500 && attempt < maxRetries) {
+      lastError = new Error((await res.json().catch(() => ({}))).error ?? 'Failed to fetch segments')
+      await new Promise<void>((resolve, reject) => {
+        const t = setTimeout(resolve, 500)
+        signal?.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')) }, { once: true })
+      })
+      continue
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.error ?? 'Failed to fetch segments')
+    }
+    const reader = res.body!.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (line.trim()) {
+          try { onSegment(JSON.parse(line)) } catch {}
+        }
       }
     }
+    return
   }
+  throw lastError ?? new Error('Failed to fetch segments')
 }
 
 export async function resetSegmentPool(activityType: string): Promise<void> {
