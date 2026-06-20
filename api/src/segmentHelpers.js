@@ -8,12 +8,14 @@ export function parseXomTime(xom) {
     : parts[0] * 60 + parts[1]
 }
 
+const MAX_POLYLINE_CHARS = 30000
+
 export function extractCoreFields(detail) {
+  const rawPolyline = detail.map?.polyline ?? null
   return {
     komTime:       parseXomTime(detail.xoms?.kom),
     qomTime:       parseXomTime(detail.xoms?.qom),
-    polyline:      detail.map?.polyline ?? null,
+    polyline:      rawPolyline && rawPolyline.length > MAX_POLYLINE_CHARS ? null : rawPolyline,
     elevationGain: detail.total_elevation_gain ?? null,
-    translatedName: detail.translatedName ?? null,
   }
 }

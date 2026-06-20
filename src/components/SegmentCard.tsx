@@ -48,9 +48,6 @@ export default function SegmentCard({ segment, unit, userLat, userLng, roadDista
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-medium text-sm leading-snug">{segment.name}</h3>
-            {segment.translatedName && (
-              <p className="text-xs text-gray-500 italic mt-0.5">{segment.translatedName}</p>
-            )}
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <Badge score={segment.score} />

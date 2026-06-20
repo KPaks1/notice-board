@@ -5,7 +5,6 @@ import {
   getUserPRCache, setUserPRCache,
 } from '../tableClient.js'
 import { stravaGet } from '../stravaClient.js'
-import { translateToEnglish } from '../translator.js'
 import { extractCoreFields } from '../segmentHelpers.js'
 
 const DELAY_BETWEEN_FETCHES_MS = 300  // ~200 req/min burst pace, within Strava's 200/15min limit
@@ -39,7 +38,6 @@ app.timer('segmentScoreJob', {
 
           try {
             const detail = await stravaGet(`/segments/${seg.id}`, tokenData.accessToken)
-            detail.translatedName = await translateToEnglish(detail.name)
             if (!coreExists) {
               await setSharedSegmentCache(seg.id, extractCoreFields(detail))
             }

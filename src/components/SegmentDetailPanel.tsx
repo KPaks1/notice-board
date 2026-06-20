@@ -208,7 +208,6 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
           <div className="flex items-end justify-between gap-3">
             <div className="flex-1 min-w-0">
               <h1 className="text-sm font-semibold text-white leading-snug line-clamp-2">{segment.name}</h1>
-              {segment.translatedName && <p className="text-xs text-white/60 italic mt-0.5 line-clamp-1">{segment.translatedName}</p>}
               <p className="text-xs text-white/70 mt-0.5">
                 {formatDistance(segment.distance, unit)}
                 {segment.elevationGain > 0 && ` · ↑${Math.round(segment.elevationGain)}m ↓${Math.round(segment.elevationLoss)}m`}

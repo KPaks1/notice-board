@@ -77,7 +77,7 @@ export function PrivacyContent() {
       <Section title="Third-party services">
         <ul className="list-disc ml-4 space-y-1 text-gray-400">
           <li><span className="text-gray-300 font-medium">Strava</span> — activity and segment data via the official Strava API</li>
-          <li><span className="text-gray-300 font-medium">Azure</span> — server-side data storage & translations</li>
+          <li><span className="text-gray-300 font-medium">Azure</span> — server-side data storage</li>
         </ul>
         <p className="mt-2">We do not sell, share, or transfer your personal data to any third party for their own purposes.</p>
       </Section>

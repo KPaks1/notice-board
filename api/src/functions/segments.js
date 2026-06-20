@@ -5,7 +5,6 @@ import { readSession } from '../session.js'
 import { cacheGet, cacheSet } from '../cache.js'
 import { StravaError, stravaHttpStatus } from '../stravaError.js'
 import { stravaGet } from '../stravaClient.js'
-import { translateToEnglish } from '../translator.js'
 import { extractCoreFields } from '../segmentHelpers.js'
 
 const TTL_EXPLORE = 4 * 60 * 60   // segment list: 4 hours
@@ -178,6 +177,7 @@ app.http('segments', {
 
       const updated = [...poolById.values()]
       setSegmentPool(athleteId, activityType, updated, newCoveredTiles)  // background write
+        .catch((err) => context.warn('Failed to save segment pool:', err.message))
       cacheSet(poolL1Key, { segments: updated, updatedAt: Date.now(), coveredTiles: newCoveredTiles }, TTL_EXPLORE)
     }
 
@@ -257,7 +257,6 @@ app.http('segments', {
       return {
         id: seg.id,
         name: seg.name,
-        translatedName: coreData.translatedName,
         distance: segDistance,
         elevationGain: coreData.elevationGain ?? Math.max(0, (seg.elevation_high ?? 0) - (seg.elevation_low ?? 0)),
         elevationLoss: eleCache?.loss ?? 0,
@@ -351,13 +350,14 @@ app.http('segments', {
           fetches++
           try {
             const detail = await stravaGet(`/segments/${seg.id}`, accessToken)
-            detail.translatedName = await translateToEnglish(detail.name)
             const coreData = extractCoreFields(detail)
             const prData   = { prElapsedTime: detail.athlete_segment_stats?.pr_elapsed_time ?? null }
             cacheSet(`segCore:${seg.id}`, coreData, TTL_LEADERBOARD)
             cacheSet(`segPr:${seg.id}:${athleteId}`, prData, TTL_LEADERBOARD)
             setSharedSegmentCache(seg.id, coreData)
+              .catch((err) => context.warn(`Failed to save core cache ${seg.id}:`, err.message))
             setUserPRCache(seg.id, athleteId, prData)
+              .catch((err) => context.warn(`Failed to save PR cache ${seg.id}:`, err.message))
             const result = buildResult(seg, coreData, prData)
             if (result) enqueue(result)
             await new Promise((r) => setTimeout(r, 100))

@@ -19,7 +19,6 @@ export interface Settings {
 export interface ScoredSegment {
   id: number
   name: string
-  translatedName: string | null
   distance: number
   elevationGain: number
   elevationLoss: number
