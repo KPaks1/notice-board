@@ -1,7 +1,45 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { HelpCircle } from 'lucide-react'
 import type { SegmentMode, ScoredSegment } from '../types'
 import type { Unit } from '../format'
 import SegmentCard from './SegmentCard'
+
+function InfoTooltip() {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  const show = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 6, left: r.left + r.width / 2 })
+    }
+    setOpen(true)
+  }
+
+  return (
+    <span className="inline-flex items-center" onMouseEnter={show} onMouseLeave={() => setOpen(false)}>
+      <button
+        ref={btnRef}
+        onClick={() => open ? setOpen(false) : show()}
+        className="text-gray-600 hover:text-gray-400 transition-colors"
+        aria-label="More information"
+      >
+        <HelpCircle size={13} />
+      </button>
+      {open && createPortal(
+        <span
+          style={{ top: pos.top, left: pos.left }}
+          className="fixed -translate-x-1/2 z-[9999] w-52 rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-xs text-gray-300 leading-snug shadow-lg pointer-events-none"
+        >
+          More segments may exist nearby. Refresh to search now, but you may hit Strava rate limits.
+        </span>,
+        document.body
+      )}
+    </span>
+  )
+}
 
 const PAGE_SIZE = 25
 
@@ -141,7 +179,7 @@ export default function EvictionsList({ segments, loading, error, onRefresh, mod
   return (
     <div className="space-y-3">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1 flex items-center gap-2">
-        {label} ({segments.length})
+        {label} ({segments.length}) <InfoTooltip />
         {loading && (
           <span className="inline-block w-3 h-3 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
         )}
