@@ -59,7 +59,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
   const { coords, error: locError } = useLocation()
   const { allSegments, loading, error, refresh, rateLimitedUntil } = useSegments(coords, settings.activityType, settings.sortBy)
   const listRef = useRef<HTMLDivElement>(null)
-  const { pullDistance } = usePullToRefresh(listRef, refresh, loading || !coords)
+  const { pullDistance } = usePullToRefresh(listRef, refresh, loading || !coords || !!rateLimitedUntil)
   const segMapRef = useRef<L.Map | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -222,15 +222,7 @@ export default function Dashboard({ stravaStatus: initialStravaStatus }: { strav
         <div className="flex items-center gap-2">
           {tab === 'board' && (
             <>
-              <button
-                onClick={refresh}
-                disabled={loading || !coords}
-                className="hidden md:block p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 transition-colors"
-                aria-label="Refresh"
-              >
-                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-              </button>
-              <button
+<button
                 onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
                 className="md:hidden p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
                 aria-label={viewMode === 'list' ? 'Switch to map' : 'Switch to list'}
