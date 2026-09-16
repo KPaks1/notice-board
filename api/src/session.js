@@ -1,6 +1,10 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 
-const secret = () => process.env.SESSION_SECRET ?? 'dev-secret-change-in-production'
+const secret = () => {
+  const value = process.env.SESSION_SECRET
+  if (!value) throw new Error('SESSION_SECRET is not set')
+  return value
+}
 
 function sign(value) {
   return createHmac('sha256', secret()).update(String(value)).digest('base64url')
