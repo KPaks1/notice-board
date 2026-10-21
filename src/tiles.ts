@@ -3,46 +3,48 @@ import L from 'leaflet'
 interface TileProvider {
   url: string
   attribution: string
-}
-
-const OSM: TileProvider = {
-  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  probeUrl: string
 }
 
 const ESRI: TileProvider = {
   url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
   attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>',
+  probeUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/0/0/0',
 }
 
-// OSM serves its "Access blocked" tile as an image with a 418 status, which an <img> tile
-// displays without firing tileerror. Probe once with fetch, where the status is visible.
-let osmUsable: Promise<boolean> | null = null
+const OSM: TileProvider = {
+  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  probeUrl: 'https://tile.openstreetmap.org/0/0/0.png',
+}
 
-function checkOsm(): Promise<boolean> {
-  osmUsable ??= fetch('https://tile.openstreetmap.org/0/0/0.png', { signal: AbortSignal.timeout(4000) })
+const PRIMARY = ESRI
+const FALLBACK = OSM
+
+let primaryUsable: Promise<boolean> | null = null
+
+function checkPrimary(): Promise<boolean> {
+  primaryUsable ??= fetch(PRIMARY.probeUrl, { signal: AbortSignal.timeout(4000) })
     .then((r) => r.ok, () => false)
-  return osmUsable
+  return primaryUsable
 }
 
-// Adds an OSM base layer to the map, falling back to Esri if OSM is unreachable or starts
-// failing mid-session. Returns a cleanup function that cancels a pending add.
 export function addBaseTileLayer(map: L.Map): () => void {
   let cancelled = false
 
-  checkOsm().then((ok) => {
+  checkPrimary().then((ok) => {
     if (cancelled) return
     if (!ok) {
-      L.tileLayer(ESRI.url, { attribution: ESRI.attribution }).addTo(map)
+      L.tileLayer(FALLBACK.url, { attribution: FALLBACK.attribution }).addTo(map)
       return
     }
 
-    const layer = L.tileLayer(OSM.url, { attribution: OSM.attribution }).addTo(map)
+    const layer = L.tileLayer(PRIMARY.url, { attribution: PRIMARY.attribution }).addTo(map)
     layer.once('tileerror', () => {
-      osmUsable = Promise.resolve(false)
-      map.attributionControl?.removeAttribution(OSM.attribution).addAttribution(ESRI.attribution)
-      layer.options.attribution = ESRI.attribution
-      layer.setUrl(ESRI.url)
+      primaryUsable = Promise.resolve(false)
+      map.attributionControl?.removeAttribution(PRIMARY.attribution).addAttribution(FALLBACK.attribution)
+      layer.options.attribution = FALLBACK.attribution
+      layer.setUrl(FALLBACK.url)
     })
   })
 
