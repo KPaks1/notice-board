@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import type { LatLngTuple } from 'leaflet'
+import { addBaseTileLayer } from '../tiles'
 
 function decodePolyline(encoded: string): LatLngTuple[] {
   const coords: LatLngTuple[] = []
@@ -29,6 +30,7 @@ export default function SegmentMiniMap({ polyline }: Props) {
   useEffect(() => {
     const el = containerRef.current
     if (!el || coords.length === 0) return
+    let cancelTiles: (() => void) | undefined
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -44,7 +46,7 @@ export default function SegmentMiniMap({ polyline }: Props) {
           keyboard: false,
           attributionControl: false,
         })
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png').addTo(map)
+        cancelTiles = addBaseTileLayer(map)
         L.polyline(coords, { color: '#f97316', weight: 3, opacity: 0.9 }).addTo(map)
         map.fitBounds(coords, { padding: [14, 14] })
         mapRef.current = map
@@ -55,6 +57,7 @@ export default function SegmentMiniMap({ polyline }: Props) {
 
     return () => {
       observer.disconnect()
+      cancelTiles?.()
       mapRef.current?.remove()
       mapRef.current = null
     }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, Crosshair, ExternalLink, Minus, Navigation, Plus, X } from 'lucide-react'
-import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet'
+import { MapContainer, Polyline, CircleMarker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import polylineDecoder from '@mapbox/polyline'
 import { fetchSegmentElevation } from '../api'
@@ -8,6 +8,7 @@ import { fetchRoadDistance } from '../osrm'
 import { haversineKm } from '../geo'
 import DistanceToStart from './DistanceToStart'
 import { MapButton } from './MapButton'
+import BaseTileLayer from './BaseTileLayer'
 import ElevationChart from './ElevationChart'
 import ScoreGauge from './ScoreGauge'
 import { formatDistance, formatPace, formatTime, type Unit } from '../format'
@@ -150,7 +151,7 @@ export default function SegmentDetailPanel({ segment, unit, userLat, userLng, on
         {decodedPath && mapBounds ? (
           <div className="h-full relative">
             <MapContainer bounds={mapBounds} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png" />
+              <BaseTileLayer />
               <Polyline
                 positions={decodedPath}
                 pathOptions={{ color: '#FC5200', opacity: 0, weight: 20 }}

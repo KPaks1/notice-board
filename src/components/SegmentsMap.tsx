@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, CircleMarker, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { ScoredSegment } from '../types'
 import { preventZoom } from './MapButton'
+import BaseTileLayer from './BaseTileLayer'
 
 interface Props {
   segments: ScoredSegment[]
@@ -117,10 +118,7 @@ export default function SegmentsMap({ segments, userLat, userLng, hoveredSegment
       zoomControl={false}
       style={{ height: '100%', width: '100%' }}
     >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-      />
+      <BaseTileLayer />
       <MapInvalidator />
       <RemoveZoomControl />
       {onMapReady && <MapReadyCallback onMapReady={onMapReady} />}
